@@ -39,7 +39,7 @@ export default function HomePage() {
               Hola, {demoUser.name.split(" ")[0]}.
             </h1>
             <p className="mt-2 text-muted-foreground">
-              Que deseas hacer hoy?
+              ¿Qué deseas hacer hoy?
             </p>
           </header>
 

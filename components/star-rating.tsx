@@ -49,35 +49,38 @@ export function StarRating({
   return (
     <div className="flex items-center gap-1">
       <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((rating) => (
-          <button
-            key={rating}
-            type="button"
-            onClick={() => handleClick(rating)}
-            onMouseEnter={() => handleMouseEnter(rating)}
-            onMouseLeave={handleMouseLeave}
-            disabled={readonly}
-            className={cn(
-              "transition-transform",
-              !readonly && "hover:scale-110 cursor-pointer",
-              readonly && "cursor-default"
-            )}
-            aria-label={`${rating} estrellas`}
-          >
-            <svg
-              viewBox="0 0 24 24"
+        {[1, 2, 3, 4, 5].map((rating) => {
+          const filled = rating <= displayValue
+          const Tag = readonly ? "span" : "button"
+          return (
+            <Tag
+              key={rating}
+              {...(!readonly && {
+                type: "button" as const,
+                onClick: () => handleClick(rating),
+                onMouseEnter: () => handleMouseEnter(rating),
+                onMouseLeave: handleMouseLeave,
+              })}
               className={cn(
-                sizeClasses[size],
-                "transition-colors",
-                rating <= displayValue
-                  ? "fill-star text-star"
-                  : "fill-star-empty text-star-empty"
+                "transition-transform",
+                !readonly && "hover:scale-110 cursor-pointer",
+                readonly && "cursor-default"
               )}
+              aria-label={readonly ? undefined : `${rating} estrellas`}
             >
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-          </button>
-        ))}
+              <svg
+                viewBox="0 0 24 24"
+                className={cn(
+                  sizeClasses[size],
+                  "transition-colors",
+                  filled ? "fill-star text-star" : "fill-star-empty text-star-empty"
+                )}
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </Tag>
+          )
+        })}
       </div>
       {showValue && (
         <span className="ml-2 text-sm font-medium text-foreground">

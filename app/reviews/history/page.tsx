@@ -116,7 +116,7 @@ export default function HistoryPage() {
           </div>
 
           {/* Summary */}
-          <div className="mb-6 rounded-xl border border-border bg-card p-6">
+          <div className="mb-6">
             <RatingSummary
               averageRating={averageRating}
               totalReviews={totalReviews}

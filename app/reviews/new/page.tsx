@@ -1,20 +1,34 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { ReviewForm } from "@/components/review-form"
 import { CheckCircle, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-export default function NewReviewPage() {
+function NewReviewContent() {
   const [submitted, setSubmitted] = useState(false)
-  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const searchParams = useSearchParams()
+
+  // En Stage 2 estos params vienen de Rider/Driver App al redirigir post-servicio
+  // Ejemplo: /reviews/new?jobId=uuid&revieweeId=clerk_id&revieweeName=Carlos+Mendez&type=professional
+  const jobId = searchParams.get("jobId")
+  const revieweeId = searchParams.get("revieweeId")
+  const revieweeName = searchParams.get("revieweeName") ?? "Carlos Mendez"
+  const revieweeType = searchParams.get("type") ?? "professional"
 
   const handleSubmit = async (data: { rating: number; comment: string }) => {
-    // Simular llamada a la API
+    setIsLoading(true)
+    // TODO Stage 2: reemplazar con fetch real al route handler correspondiente
+    // const endpoint = revieweeType === "professional"
+    //   ? "/api/reviews/from-client"
+    //   : "/api/reviews/from-professional"
+    // await fetch(endpoint, { method: "POST", body: JSON.stringify({ job_id: jobId, ... }) })
     await new Promise((resolve) => setTimeout(resolve, 1000))
-    console.log("Review submitted:", data)
+    console.log("Review submitted:", { jobId, revieweeId, revieweeType, ...data })
+    setIsLoading(false)
     setSubmitted(true)
   }
 
@@ -32,7 +46,7 @@ export default function NewReviewPage() {
                 Gracias por tu reseña
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Tu opinion nos ayuda a mejorar el servicio
+                Tu opinión nos ayuda a mejorar el servicio
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <button
@@ -60,7 +74,6 @@ export default function NewReviewPage() {
       <Header />
       <main className="flex-1 px-4 py-8 sm:px-6">
         <div className="mx-auto max-w-md">
-          {/* Back Button */}
           <Link
             href="/"
             className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -71,7 +84,7 @@ export default function NewReviewPage() {
 
           <header className="mb-6">
             <h1 className="font-display text-2xl font-bold text-foreground">
-              Deja tu opinion
+              Deja tu opinión
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               Tu feedback es importante para nosotros
@@ -79,10 +92,22 @@ export default function NewReviewPage() {
           </header>
 
           <div className="rounded-xl border border-border bg-card p-6">
-            <ReviewForm onSubmit={handleSubmit} revieweeName="Carlos Mendez" />
+            <ReviewForm
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+              revieweeName={revieweeName}
+            />
           </div>
         </div>
       </main>
     </div>
+  )
+}
+
+export default function NewReviewPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewReviewContent />
+    </Suspense>
   )
 }

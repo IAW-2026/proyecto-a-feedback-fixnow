@@ -20,14 +20,14 @@ Un mismo usuario de Clerk puede acceder a múltiples aplicaciones, dependiendo d
 
 ## Login por aplicación (Clerk)
 
-Todas las apps tienen su propia pantalla de login, pero delegan autenticación y gestión de sesión en Clerk.
+Las 4 aplicaciones del ecosistema son webapps completas con su propio frontend desarrollado en Next.js. Todas tienen pantalla de login y delegan la sesión en Clerk. 
 
-| App | Login requerido | Proveedor de auth | Validación en backend |
-| --- | --- | --- | --- |
-| Rider App | Sí | Clerk | Verificar JWT y rol `client` o `admin` |
-| Driver App | Sí | Clerk | Verificar JWT y rol `professional` o `admin` |
-| Payments App | Sí (acceso de consulta/estado) | Clerk | Verificar JWT y relacionar `sub` con `client_id` o `professional_id` |
-| Feedback App | Sí | Clerk | Verificar JWT y permitir crear/consultar reseñas según rol |
+| App | Acceso de Usuario (Frontend con JWT) | Acceso de Servidor (API con Service-Token) |
+| --- | --- | --- |
+| Rider App | Clientes (para gestionar Jobs) y Admins. | Driver y Payments App (para actualizar estados). |
+| Driver App | Profesionales (para aceptar Jobs) y Admins. | Rider, Payments y Feedback App (para notificaciones y rating). |
+| Payments App | Clientes (para la pantalla de Checkout) y Admins (para historial de transacciones). | Rider App (para iniciar el proceso de cobro internamente). |
+| Feedback App | Admins (para panel de moderación y reportes de reseñas). | Rider y Driver App (para enviar las nuevas reseñas). |
 
 Flujo esperado en cada app:
 1. El usuario se autentica con Clerk desde el frontend de la app.

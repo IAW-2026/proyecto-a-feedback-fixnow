@@ -38,11 +38,13 @@ Nota: las contraseñas y recuperación de cuenta son gestionadas exclusivamente 
 - `is_blocked`: Boolean
 - `job_id`: UUID (referencia externa a Rider App, opcional si el bloque corresponde a un trabajo)
 
+> El campo `job_id` en la entidad `Availability` se establece y escribe **automáticamente** por la Driver App en el momento en que el profesional acepta una solicitud programada. No se requiere ni se espera confirmación externa de la Rider App para realizar este registro local, ya que la Driver App es la única dueña y responsable de manejar la agenda de sus profesionales.
+
 **JobAssignment**
 - `id`: UUID
 - `job_id`: UUID (Referencia externa a Rider App)
 - `professional_id`: UUID (FK a Professional)
-- `status`: Enum(`pending`, `accepted`, `completed`)
+- `status`: Enum(`pending`, `accepted`, `in_progress`, `completed`, `cancelled`)
 - `accepted_at`: Timestamp
 
 ## Rider App
@@ -64,9 +66,11 @@ Nota: las contraseñas y recuperación de cuenta son gestionadas exclusivamente 
 - `location`: Point(lat/lng)
 - `requested_date`: Date
 - `urgency`: Enum(`immediate`, `scheduled`)
-- `status`: Enum(`pending`, `accepted`, `completed`, `cancelled`)
+- `status`: Enum(`pending`, `accepted`, `in_progress`, `completed`, `cancelled`)
 - `professional_id`: UUID (referencia externa a Driver App)
 - `estimated_price`: Decimal
+- `cancelled_at`: Timestamp 
+- `cancellation_reason`: String/Text
 
 ## Payments App
 

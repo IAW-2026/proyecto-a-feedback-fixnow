@@ -15,7 +15,7 @@ function formatDate(date: Date | string): string {
 
   if (diffDays === 0) return "Hoy"
   if (diffDays === 1) return "Ayer"
-  if (diffDays < 7) return `Hace ${diffDays} dias`
+  if (diffDays < 7) return `Hace ${diffDays} días`
   if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semanas`
   return d.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })
 }
@@ -26,7 +26,7 @@ export function ReviewCard({ rating, comment, createdAt, reviewerName }: ReviewC
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <StarRating value={rating} readonly size="sm" />
-          <span className="text-sm font-medium text-foreground">{rating}.0</span>
+          <span className="text-sm font-medium text-foreground">{rating.toFixed(1)}</span>
         </div>
         <span className="text-sm text-muted-foreground">{formatDate(createdAt)}</span>
       </div>

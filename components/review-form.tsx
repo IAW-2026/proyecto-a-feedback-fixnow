@@ -19,7 +19,7 @@ export function ReviewForm({ onSubmit, isLoading = false, revieweeName }: Review
     setError("")
 
     if (rating === 0) {
-      setError("Por favor selecciona una calificacion")
+      setError("Por favor selecciona una calificación")
       return
     }
 
@@ -30,12 +30,12 @@ export function ReviewForm({ onSubmit, isLoading = false, revieweeName }: Review
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-3">
         <label className="block text-sm font-medium text-foreground">
-          {revieweeName ? `Califica a ${revieweeName}` : "Calificacion"}
+          {revieweeName ? `Califica a ${revieweeName}` : "Calificación"}
         </label>
         <div className="flex flex-col items-center gap-2 py-4">
           <StarRating value={rating} onChange={setRating} size="lg" />
           <span className="text-sm text-muted-foreground">
-            {rating === 0 && "Selecciona una calificacion"}
+            {rating === 0 && "Selecciona una calificación"}
             {rating === 1 && "Muy malo"}
             {rating === 2 && "Malo"}
             {rating === 3 && "Regular"}

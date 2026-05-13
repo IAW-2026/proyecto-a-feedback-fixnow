@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Review {
+  id           String       @id @default(uuid())
+  jobId        String
+  reviewerId   String
+  revieweeId   String
+  revieweeType RevieweeType
+  rating       Int
+  comment      String?
+  createdAt    DateTime     @default(now())
+
+  @@unique([reviewerId, jobId])
+  @@map("reviews")
+}
+
+enum RevieweeType {
+  professional
+  client
+}
