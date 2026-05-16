@@ -35,7 +35,7 @@ export function Header() {
               >
                 Panel admin
               </Link>
-              <UserButton afterSignOutUrl="/sign-in" />
+              <UserButton />
             </>
           ) : (
             <Link

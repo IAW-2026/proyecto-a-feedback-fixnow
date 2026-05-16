@@ -2,21 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 import { db } from "@/lib/db"
-import { validateServiceToken } from "@/lib/service-auth"
+import { withServiceAuth } from "@/lib/service-auth"
+import { parsePagination } from "@/lib/api-utils"
 
-export async function GET(
+export const GET = withServiceAuth(async (
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
-  if (!validateServiceToken(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+) => {
   const { id: professionalId } = await params
   const { searchParams } = new URL(req.url)
-  const page = Math.max(1, Number(searchParams.get("page") ?? 1))
-  const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 10)))
-  const skip = (page - 1) * limit
+  const { limit, skip } = parsePagination(searchParams)
 
   const [reviews, { _avg, _count }] = await Promise.all([
     db.review.findMany({
@@ -49,4 +44,4 @@ export async function GET(
       created_at: r.createdAt,
     })),
   })
-}
+})

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 export const dynamic = "force-dynamic"
 import { z } from "zod"
 import { db } from "@/lib/db"
-import { validateServiceToken } from "@/lib/service-auth"
+import { withServiceAuth } from "@/lib/service-auth"
 import { updateProfessionalRating } from "@/services/driver-app"
 
 const schema = z.object({
@@ -14,11 +14,7 @@ const schema = z.object({
   comment: z.string().optional(),
 })
 
-export async function POST(req: NextRequest) {
-  if (!validateServiceToken(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+export const POST = withServiceAuth(async (req: NextRequest) => {
   const body = await req.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
@@ -69,4 +65,4 @@ export async function POST(req: NextRequest) {
     },
     { status: 201 }
   )
-}
+})

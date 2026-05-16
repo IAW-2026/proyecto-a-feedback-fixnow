@@ -1,4 +1,5 @@
 import { StarRating } from "./star-rating"
+import { formatDateFull } from "@/lib/date-utils"
 
 interface AdminReviewCardProps {
   id: string
@@ -9,17 +10,6 @@ interface AdminReviewCardProps {
   rating: number
   comment: string | null
   createdAt: Date | string
-}
-
-function formatDate(date: Date | string): string {
-  const d = new Date(date)
-  return d.toLocaleDateString("es-ES", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
 }
 
 function truncate(str: string, len = 16): string {
@@ -60,7 +50,7 @@ export function AdminReviewCard({
           </div>
         </div>
 
-        <span className="text-xs text-muted-foreground">{formatDate(createdAt)}</span>
+        <span className="text-xs text-muted-foreground">{formatDateFull(createdAt)}</span>
       </div>
 
       {/* Comentario */}
