@@ -32,7 +32,7 @@ export default function SignInPage() {
             y profesionales de la plataforma FixNow.
           </p>
 
-          {/* Stats */}
+          {/* Stats */} // estan hardcodeados pero podran ser dinámicos en un futuro
           <div className="grid grid-cols-2 gap-3">
             {[
               { label: "Reseñas totales", value: "1.240" },
