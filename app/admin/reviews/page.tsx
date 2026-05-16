@@ -1,8 +1,8 @@
 import { db } from "@/lib/db"
-
-export const dynamic = "force-dynamic"
 import { Header } from "@/components/header"
 import { ReviewCard } from "@/components/review-card"
+
+export const dynamic = "force-dynamic"
 
 export default async function AdminReviewsPage() {
   const reviews = await db.review.findMany({

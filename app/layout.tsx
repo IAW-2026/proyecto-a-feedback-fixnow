@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ClerkProvider } from '@clerk/nextjs'
-import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({
@@ -53,10 +52,8 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="es" className={`${spaceGrotesk.variable} ${inter.variable} bg-background`} suppressHydrationWarning>
         <body className="font-sans antialiased">
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            {children}
-            {process.env.NODE_ENV === 'production' && <Analytics />}
-          </ThemeProvider>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
         </body>
       </html>
     </ClerkProvider>
