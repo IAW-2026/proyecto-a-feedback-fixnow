@@ -24,6 +24,7 @@ This is **Feedback App**, one of four microservices in the FixNow platform (Type
 
 **Calls to APIs from other web apps must be mocked or simulated during this stage.**
 
+
 ## Feedback App responsibilities
 
 - Receives reviews from **Rider App** (client rates professional) and **Driver App** (professional rates client)
@@ -73,7 +74,7 @@ Clerk JWT claims used: `sub` (maps to `reviewer_id`/`reviewee_id`), `role` (`cli
 
 ## Tech stack
 
-- **Next.js 16** (App Router) + **React 19** + **TypeScript 5.7**
+- **Next.js 16** (App Router) + **React 19** + **TypeScript 5.7** **Use Typescript in strict mode**
 - **Tailwind CSS v4** — uses `@tailwindcss/postcss`, no `tailwind.config.js`
 - **shadcn/ui** (Radix UI) — components are in `components/ui/`, pre-installed and ready to use
 - **React Hook Form** + **Zod** for form validation

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { Review } from "@prisma/client"
 import { db } from "@/lib/db"
 import { Header } from "@/components/header"
 import { AdminReviewCard } from "@/components/admin-review-card"
@@ -86,7 +87,7 @@ export default async function AdminReviewsPage({
             </div>
           ) : (
             <div className="space-y-3">
-              {reviews.map((review) => (
+              {reviews.map((review: Review) => (
                 <AdminReviewCard
                   key={review.id}
                   id={review.id}
