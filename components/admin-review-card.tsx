@@ -54,7 +54,7 @@ export function AdminReviewCard({
       </div>
 
       {/* Comentario */}
-      <div className="mt-3 min-h-[2rem]">
+      <div className="mt-3 min-h-8">
         {comment ? (
           <p className="text-sm text-foreground leading-relaxed">{comment}</p>
         ) : (

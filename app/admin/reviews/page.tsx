@@ -35,8 +35,8 @@ export default async function AdminReviewsPage({
 
   const totalCount = stats._count.id
   const avgRating = stats._avg.rating ?? 0
-  const profCount = breakdown.find((b) => b.revieweeType === "professional")?._count.id ?? 0
-  const clientCount = breakdown.find((b) => b.revieweeType === "client")?._count.id ?? 0
+  const profCount = breakdown.find((b: { revieweeType: string }) => b.revieweeType === "professional")?._count.id ?? 0
+  const clientCount = breakdown.find((b: { revieweeType: string }) => b.revieweeType === "client")?._count.id ?? 0
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
