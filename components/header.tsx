@@ -14,7 +14,7 @@ export function Header() {
   const pathname = usePathname()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
           <Image
@@ -50,7 +50,7 @@ export function Header() {
                     >
                       {label}
                       {isActive && (
-                        <span className="absolute inset-x-3 -bottom-[1px] h-0.5 rounded-full bg-foreground" />
+                        <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-foreground" />
                       )}
                     </Link>
                   )
