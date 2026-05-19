@@ -1,4 +1,4 @@
-// TODO Etapa 3: reemplazar el mock por la llamada real a Driver App
+// TODO reemplazar el mock por la llamada real a Driver App
 export async function updateProfessionalRating(
   professionalId: string,
   newAverageRating: number,
