@@ -2,13 +2,19 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useAuth, UserButton } from "@clerk/nextjs"
+
+const adminLinks = [
+  { href: "/admin/reviews", label: "Reseñas" },
+]
 
 export function Header() {
   const { isSignedIn } = useAuth()
+  const pathname = usePathname()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
           <Image
@@ -26,15 +32,30 @@ export function Header() {
           </div>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           {isSignedIn ? (
             <>
-              <Link
-                href="/admin/reviews"
-                className="hidden sm:block text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Panel admin
-              </Link>
+              <nav className="mr-2 hidden items-center gap-1 sm:flex">
+                {adminLinks.map(({ href, label }) => {
+                  const isActive = pathname.startsWith(href)
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                      {isActive && (
+                        <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-foreground" />
+                      )}
+                    </Link>
+                  )
+                })}
+              </nav>
               <UserButton />
             </>
           ) : (

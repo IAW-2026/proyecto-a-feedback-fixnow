@@ -1,6 +1,22 @@
 import { SignIn } from "@clerk/nextjs"
+import { db } from "@/lib/db"
 
-export default function SignInPage() {
+export const dynamic = "force-dynamic"
+
+export default async function SignInPage() {
+  const [totals, profGroups, clientGroups] = await Promise.all([
+    db.review.aggregate({ _count: { id: true }, _avg: { rating: true } }),
+    db.review.groupBy({ by: ["revieweeId"], where: { revieweeType: "professional" } }),
+    db.review.groupBy({ by: ["revieweeId"], where: { revieweeType: "client" } }),
+  ])
+
+  const stats = [
+    { label: "Reseñas totales",       value: totals._count.id.toLocaleString("es-AR") },
+    { label: "Promedio general",       value: `${(totals._avg.rating ?? 0).toFixed(1)} ★` },
+    { label: "Profesionales evaluados", value: profGroups.length },
+    { label: "Clientes evaluados",     value: clientGroups.length },
+  ]
+
   return (
     <div className="flex min-h-screen">
 
@@ -32,14 +48,9 @@ export default function SignInPage() {
             y profesionales de la plataforma FixNow.
           </p>
 
-          {/* Stats */} // estan hardcodeados pero podran ser dinámicos en un futuro
+          {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "Reseñas totales", value: "1.240" },
-              { label: "Promedio general", value: "4.7 ★" },
-              { label: "Profesionales", value: "318" },
-              { label: "Pendientes", value: "12" },
-            ].map((s) => (
+            {stats.map((s) => (
               <div
                 key={s.label}
                 className="rounded-xl p-4"
