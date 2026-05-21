@@ -1,37 +1,52 @@
 import { StarRating } from "./star-rating"
 import { formatDateFull } from "@/lib/date-utils"
+import { updateReviewStatus } from "@/app/admin/reviews/actions"
+
+type ReviewStatus = "pending" | "approved" | "rejected"
 
 interface AdminReviewCardProps {
-  id: string
-  jobId: string
-  reviewerId: string
-  revieweeId: string
+  id:           string
+  jobId:        string
+  reviewerId:   string
+  revieweeId:   string
   revieweeType: "professional" | "client"
-  rating: number
-  comment: string | null
-  createdAt: Date | string
+  rating:       number
+  comment:      string | null
+  status:       ReviewStatus
+  createdAt:    Date | string
 }
 
-function truncate(str: string, len = 16): string {
+const statusConfig: Record<ReviewStatus, { label: string; className: string }> = {
+  pending:  { label: "Pendiente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  approved: { label: "Aprobada",  className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  rejected: { label: "Rechazada", className: "bg-red-100   text-red-700   dark:bg-red-900/30   dark:text-red-400"   },
+}
+
+function truncate(str: string, len = 18): string {
   return str.length > len ? str.slice(0, len) + "…" : str
 }
 
 export function AdminReviewCard({
+  id,
   jobId,
   reviewerId,
   revieweeId,
   revieweeType,
   rating,
   comment,
+  status,
   createdAt,
 }: AdminReviewCardProps) {
   const isProfReview = revieweeType === "professional"
+  const sc = statusConfig[status]
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
-      {/* Fila superior: badge + rating + fecha */}
+
+      {/* Fila superior: badges + rating + fecha */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
+
           {/* Badge de dirección */}
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -41,6 +56,11 @@ export function AdminReviewCard({
             }`}
           >
             {isProfReview ? "Cliente → Profesional" : "Profesional → Cliente"}
+          </span>
+
+          {/* Badge de estado */}
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${sc.className}`}>
+            {sc.label}
           </span>
 
           {/* Rating */}
@@ -62,11 +82,41 @@ export function AdminReviewCard({
         )}
       </div>
 
-      {/* Metadata: IDs */}
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-3">
-        <MetaField label="Job" value={jobId} />
-        <MetaField label="Autor" value={reviewerId} />
-        <MetaField label="Evaluado" value={revieweeId} />
+      {/* Metadata + acciones */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <MetaField label="Job"     value={jobId}      />
+          <MetaField label="Autor"   value={reviewerId} />
+          <MetaField label="Evaluado" value={revieweeId} />
+        </div>
+
+        {/* Botones de moderación */}
+        <div className="flex items-center gap-2">
+          {status !== "approved" && (
+            <form action={updateReviewStatus}>
+              <input type="hidden" name="id"     value={id} />
+              <input type="hidden" name="status" value="approved" />
+              <button
+                type="submit"
+                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
+              >
+                Aprobar
+              </button>
+            </form>
+          )}
+          {status !== "rejected" && (
+            <form action={updateReviewStatus}>
+              <input type="hidden" name="id"     value={id} />
+              <input type="hidden" name="status" value="rejected" />
+              <button
+                type="submit"
+                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+              >
+                Rechazar
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -80,7 +130,7 @@ function MetaField({ label, value }: { label: string; value: string }) {
         className="rounded bg-muted px-1.5 py-0.5 text-xs text-foreground font-mono"
         title={value}
       >
-        {truncate(value, 18)}
+        {truncate(value)}
       </code>
     </div>
   )
