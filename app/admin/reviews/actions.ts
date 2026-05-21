@@ -1,6 +1,6 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { updateTag } from "next/cache"
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/clerk"
 
@@ -17,5 +17,6 @@ export async function updateReviewStatus(formData: FormData) {
     data:  { status },
   })
 
-  revalidatePath("/admin/reviews")
+  // updateTag invalida el cache desde un Server Action (read-your-own-writes)
+  updateTag("review-breakdown")
 }

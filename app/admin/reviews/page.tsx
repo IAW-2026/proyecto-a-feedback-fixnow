@@ -1,11 +1,26 @@
 import Link from "next/link"
 import type { Review } from "@prisma/client"
+import { unstable_cache } from "next/cache"
 import { LayoutList, Clock, CheckCircle, XCircle, MessageSquareOff, type LucideIcon } from "lucide-react"
 import { db } from "@/lib/db"
 import { Header } from "@/components/header"
 import { AdminReviewCard } from "@/components/admin-review-card"
 
 export const dynamic = "force-dynamic"
+
+/**
+ * Conteos globales por (status × revieweeType) — un solo query en lugar de dos.
+ * Se cachea con tag "review-breakdown": se invalida únicamente cuando el admin
+ * aprueba o rechaza una reseña, no en cada visita a la página.
+ */
+const getBreakdown = unstable_cache(
+  () => db.review.groupBy({
+    by: ["status", "revieweeType"],
+    _count: { _all: true },
+  }),
+  ["review-breakdown"],
+  { tags: ["review-breakdown"] },
+)
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected"
 type TypeFilter   = "all" | "professional" | "client"
@@ -44,24 +59,29 @@ export default async function AdminReviewsPage({
     ...(activeType   !== "all" && { revieweeType: activeType  }),
   }
 
-  const [reviews, statusBreakdown, typeBreakdown] = await Promise.all([
+  // 2 queries en paralelo en lugar de 3: breakdown está cacheado por tag
+  const [reviews, breakdown] = await Promise.all([
     db.review.findMany({
       where,
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
-    // Conteos globales por estado — para stat cards y tabs de estado
-    db.review.groupBy({ by: ["status"],       _count: { id: true } }),
-    // Conteos globales por tipo — para tabs de tipo
-    db.review.groupBy({ by: ["revieweeType"], _count: { id: true } }),
+    getBreakdown(),
   ])
 
-  const totalCount    = statusBreakdown.reduce((acc, b) => acc + b._count.id, 0)
-  const pendingCount  = statusBreakdown.find(b => b.status === "pending")?._count.id  ?? 0
-  const approvedCount = statusBreakdown.find(b => b.status === "approved")?._count.id ?? 0
-  const rejectedCount = statusBreakdown.find(b => b.status === "rejected")?._count.id ?? 0
-  const profCount     = typeBreakdown.find(b => b.revieweeType === "professional")?._count.id ?? 0
-  const clientCount   = typeBreakdown.find(b => b.revieweeType === "client")?._count.id       ?? 0
+  // Derivar todos los conteos del único groupBy (status × revieweeType).
+  // Cast explícito porque el genérico de Prisma no estrecha _count correctamente.
+  type BreakdownRow = { status: string; revieweeType: string; _count: { _all: number } }
+  const rows = breakdown as BreakdownRow[]
+  const sum = (fn: (b: BreakdownRow) => boolean) =>
+    rows.filter(fn).reduce((acc, b) => acc + b._count._all, 0)
+
+  const totalCount    = sum(() => true)
+  const pendingCount  = sum(b => b.status === "pending")
+  const approvedCount = sum(b => b.status === "approved")
+  const rejectedCount = sum(b => b.status === "rejected")
+  const profCount     = sum(b => b.revieweeType === "professional")
+  const clientCount   = sum(b => b.revieweeType === "client")
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
