@@ -16,6 +16,7 @@ async function main() {
         revieweeType: "professional",
         rating: 5,
         comment: "Excelente trabajo, llegó a horario y resolvió el problema en minutos. Lo recomiendo totalmente.",
+        status: "approved",
         createdAt: new Date("2025-04-01T10:30:00Z"),
       },
       {
@@ -26,6 +27,7 @@ async function main() {
         revieweeType: "professional",
         rating: 4,
         comment: "Muy buen servicio, prolijo y puntual. Le daría 5 estrellas pero tardó un poco más de lo estimado.",
+        status: "approved",
         createdAt: new Date("2025-04-03T14:00:00Z"),
       },
       {
@@ -36,6 +38,7 @@ async function main() {
         revieweeType: "professional",
         rating: 2,
         comment: "El trabajo quedó a medias, tuve que llamar a otro profesional para que lo termine. Mala experiencia.",
+        status: "pending",
         createdAt: new Date("2025-04-05T09:15:00Z"),
       },
       {
@@ -46,6 +49,7 @@ async function main() {
         revieweeType: "professional",
         rating: 5,
         comment: "Segunda vez que lo contrato y siempre cumple. Muy profesional.",
+        status: "approved",
         createdAt: new Date("2025-04-08T11:00:00Z"),
       },
       {
@@ -56,6 +60,7 @@ async function main() {
         revieweeType: "professional",
         rating: 3,
         comment: "El servicio estuvo bien pero el precio final fue mayor al presupuestado.",
+        status: "pending",
         createdAt: new Date("2025-04-10T16:30:00Z"),
       },
       {
@@ -66,6 +71,7 @@ async function main() {
         revieweeType: "professional",
         rating: 5,
         comment: null,
+        status: "approved",
         createdAt: new Date("2025-04-12T08:45:00Z"),
       },
       {
@@ -76,6 +82,7 @@ async function main() {
         revieweeType: "professional",
         rating: 1,
         comment: "No se presentó en el horario acordado y no avisó. Pésima atención.",
+        status: "rejected",
         createdAt: new Date("2025-04-15T13:20:00Z"),
       },
       {
@@ -86,6 +93,7 @@ async function main() {
         revieweeType: "professional",
         rating: 4,
         comment: "Muy atento y rápido. El trabajo quedó impecable.",
+        status: "approved",
         createdAt: new Date("2025-04-18T10:00:00Z"),
       },
       {
@@ -96,6 +104,7 @@ async function main() {
         revieweeType: "professional",
         rating: 5,
         comment: "Terminó antes de lo esperado y explicó todo lo que hizo. 10/10.",
+        status: "pending",
         createdAt: new Date("2025-04-20T15:10:00Z"),
       },
 
@@ -108,6 +117,7 @@ async function main() {
         revieweeType: "client",
         rating: 5,
         comment: "Cliente muy amable, explicó el problema con claridad y el lugar de trabajo estaba ordenado.",
+        status: "approved",
         createdAt: new Date("2025-04-01T12:00:00Z"),
       },
       {
@@ -118,6 +128,7 @@ async function main() {
         revieweeType: "client",
         rating: 4,
         comment: "Buen cliente, aunque costó un poco acordar el horario al principio.",
+        status: "pending",
         createdAt: new Date("2025-04-03T16:30:00Z"),
       },
       {
@@ -128,6 +139,7 @@ async function main() {
         revieweeType: "client",
         rating: 2,
         comment: "El cliente cambió los requerimientos a mitad del trabajo sin respetar el presupuesto acordado.",
+        status: "rejected",
         createdAt: new Date("2025-04-05T11:00:00Z"),
       },
       {
@@ -138,6 +150,7 @@ async function main() {
         revieweeType: "client",
         rating: 5,
         comment: null,
+        status: "approved",
         createdAt: new Date("2025-04-10T18:00:00Z"),
       },
       {
@@ -148,6 +161,7 @@ async function main() {
         revieweeType: "client",
         rating: 5,
         comment: "Excelente cliente, muy puntual y cordial. Con gusto volvería a trabajar con él.",
+        status: "approved",
         createdAt: new Date("2025-04-18T12:30:00Z"),
       },
       {
@@ -158,6 +172,7 @@ async function main() {
         revieweeType: "client",
         rating: 4,
         comment: "Cliente tranquilo y fácil de tratar. El acceso al lugar fue sencillo.",
+        status: "pending",
         createdAt: new Date("2025-04-20T17:00:00Z"),
       },
     ],

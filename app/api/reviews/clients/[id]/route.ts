@@ -15,13 +15,13 @@ export const GET = withServiceAuth(async (
 
   const [reviews, { _avg, _count }] = await Promise.all([
     db.review.findMany({
-      where: { revieweeId: clientId, revieweeType: "client" },
+      where: { revieweeId: clientId, revieweeType: "client", status: "approved" },
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,
     }),
     db.review.aggregate({
-      where: { revieweeId: clientId, revieweeType: "client" },
+      where: { revieweeId: clientId, revieweeType: "client", status: "approved" },
       _avg: { rating: true },
       _count: { rating: true },
     }),
