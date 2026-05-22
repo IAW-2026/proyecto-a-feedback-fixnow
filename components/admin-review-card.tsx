@@ -5,15 +5,16 @@ import { updateReviewStatus } from "@/app/admin/reviews/actions"
 type ReviewStatus = "pending" | "approved" | "rejected"
 
 interface AdminReviewCardProps {
-  id:           string
-  jobId:        string
-  reviewerId:   string
-  revieweeId:   string
-  revieweeType: "professional" | "client"
-  rating:       number
-  comment:      string | null
-  status:       ReviewStatus
-  createdAt:    Date | string
+  id:              string
+  jobId:           string
+  reviewerId:      string
+  revieweeId:      string
+  revieweeType:    "professional" | "client"
+  rating:          number
+  comment:         string | null
+  status:          ReviewStatus
+  createdAt:       Date | string
+  showStatusBadge?: boolean
 }
 
 const statusConfig: Record<ReviewStatus, { label: string; className: string }> = {
@@ -36,6 +37,7 @@ export function AdminReviewCard({
   comment,
   status,
   createdAt,
+  showStatusBadge = true,
 }: AdminReviewCardProps) {
   const isProfReview = revieweeType === "professional"
   const sc = statusConfig[status]
@@ -58,10 +60,12 @@ export function AdminReviewCard({
             {isProfReview ? "Cliente → Profesional" : "Profesional → Cliente"}
           </span>
 
-          {/* Badge de estado */}
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${sc.className}`}>
-            {sc.label}
-          </span>
+          {/* Badge de estado — se oculta cuando el filtro activo ya lo indica */}
+          {showStatusBadge && (
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${sc.className}`}>
+              {sc.label}
+            </span>
+          )}
 
           {/* Rating */}
           <div className="flex items-center gap-1.5">
@@ -90,33 +94,30 @@ export function AdminReviewCard({
           <MetaField label="Evaluado" value={revieweeId} />
         </div>
 
-        {/* Botones de moderación */}
-        <div className="flex items-center gap-2">
+        {/* Botones de moderación — un solo form, el value del botón determina el status */}
+        <form action={updateReviewStatus} className="flex items-center gap-2">
+          <input type="hidden" name="id" value={id} />
           {status !== "approved" && (
-            <form action={updateReviewStatus}>
-              <input type="hidden" name="id"     value={id} />
-              <input type="hidden" name="status" value="approved" />
-              <button
-                type="submit"
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
-              >
-                Aprobar
-              </button>
-            </form>
+            <button
+              type="submit"
+              name="status"
+              value="approved"
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700"
+            >
+              Aprobar
+            </button>
           )}
           {status !== "rejected" && (
-            <form action={updateReviewStatus}>
-              <input type="hidden" name="id"     value={id} />
-              <input type="hidden" name="status" value="rejected" />
-              <button
-                type="submit"
-                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-              >
-                Rechazar
-              </button>
-            </form>
+            <button
+              type="submit"
+              name="status"
+              value="rejected"
+              className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+            >
+              Rechazar
+            </button>
           )}
-        </div>
+        </form>
       </div>
     </div>
   )

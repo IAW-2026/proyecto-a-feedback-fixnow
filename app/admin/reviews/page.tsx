@@ -1,10 +1,12 @@
-import Link from "next/link"
 import type { Review } from "@prisma/client"
 import { unstable_cache } from "next/cache"
-import { LayoutList, Clock, CheckCircle, XCircle, MessageSquareOff, type LucideIcon } from "lucide-react"
+import { LayoutList, Clock, CheckCircle, XCircle } from "lucide-react"
 import { db } from "@/lib/db"
 import { Header } from "@/components/header"
 import { AdminReviewCard } from "@/components/admin-review-card"
+import { StatCard } from "@/components/stat-card"
+import { FilterTab } from "@/components/filter-tab"
+import { ReviewEmptyState } from "@/components/review-empty-state"
 
 export const dynamic = "force-dynamic"
 
@@ -142,7 +144,7 @@ export default async function AdminReviewsPage({
 
           {/* Lista */}
           {reviews.length === 0 ? (
-            <EmptyState status={activeStatus} type={activeType} />
+            <ReviewEmptyState status={activeStatus} type={activeType} />
           ) : (
             <div className="space-y-3">
               {reviews.map((review: Review, index) => (
@@ -161,6 +163,7 @@ export default async function AdminReviewsPage({
                     comment={review.comment}
                     status={review.status}
                     createdAt={review.createdAt}
+                    showStatusBadge={activeStatus === "all"}
                   />
                 </div>
               ))}
@@ -174,100 +177,6 @@ export default async function AdminReviewsPage({
           )}
         </div>
       </main>
-    </div>
-  )
-}
-
-/* ——— Stat cards ——— */
-
-const accentStyles = {
-  navy:  { border: "#031D44", iconBg: "bg-slate-100", iconColor: "text-slate-700", value: "text-foreground"  },
-  amber: { border: "#d97706", iconBg: "bg-amber-50",  iconColor: "text-amber-600", value: "text-amber-600"   },
-  green: { border: "#16a34a", iconBg: "bg-green-50",  iconColor: "text-green-600", value: "text-green-600"   },
-  red:   { border: "#dc2626", iconBg: "bg-red-50",    iconColor: "text-red-600",   value: "text-red-600"     },
-}
-
-function StatCard({
-  label, value, icon: Icon, accent = "navy",
-}: {
-  label: string
-  value: string | number
-  icon: LucideIcon
-  accent?: keyof typeof accentStyles
-}) {
-  const s = accentStyles[accent]
-  return (
-    <div
-      className="rounded-xl border border-border bg-card p-4"
-      style={{ borderLeft: `3px solid ${s.border}` }}
-    >
-      <div className="flex items-start justify-between">
-        <p className="text-xs text-muted-foreground leading-snug">{label}</p>
-        <span className={`rounded-md p-1.5 ${s.iconBg}`}>
-          <Icon className={`h-3.5 w-3.5 ${s.iconColor}`} />
-        </span>
-      </div>
-      <p className={`mt-2 font-display text-2xl font-bold ${s.value}`}>{value}</p>
-    </div>
-  )
-}
-
-/* ——— Filter tabs ——— */
-
-function FilterTab({
-  href, active, accent, size = "md", children,
-}: {
-  href: string
-  active: boolean
-  accent?: "amber" | "green" | "red"
-  size?: "md" | "sm"
-  children: React.ReactNode
-}) {
-  const accentActiveClass: Record<string, string> = {
-    amber: "bg-amber-600 text-white",
-    green: "bg-green-600 text-white",
-    red:   "bg-red-600   text-white",
-  }
-  const activeClass = accent ? accentActiveClass[accent] : "bg-foreground text-background"
-
-  return (
-    <Link
-      href={href}
-      className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
-        size === "sm" ? "text-xs" : "text-sm"
-      } ${
-        active
-          ? activeClass
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-      }`}
-    >
-      {children}
-    </Link>
-  )
-}
-
-/* ——— Empty state ——— */
-
-function EmptyState({ status, type }: { status: StatusFilter; type: TypeFilter }) {
-  const typeLabel =
-    type === "professional" ? " de clientes sobre profesionales"
-    : type === "client"     ? " de profesionales sobre clientes"
-    : ""
-
-  const messages: Record<StatusFilter, string> = {
-    all:      `No hay reseñas${typeLabel} en el sistema`,
-    pending:  `No hay reseñas pendientes${typeLabel}`,
-    approved: `No hay reseñas aprobadas${typeLabel}`,
-    rejected: `No hay reseñas rechazadas${typeLabel}`,
-  }
-
-  return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
-      <div className="mb-4 rounded-full bg-muted p-4">
-        <MessageSquareOff className="h-7 w-7 text-muted-foreground" />
-      </div>
-      <p className="font-display text-base font-semibold text-foreground">Sin reseñas</p>
-      <p className="mt-1 text-sm text-muted-foreground">{messages[status]}</p>
     </div>
   )
 }
