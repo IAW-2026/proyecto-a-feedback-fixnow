@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation"
 import { useAuth, UserButton } from "@clerk/nextjs"
 
 const adminLinks = [
-  { href: "/admin/reviews", label: "Reseñas" },
+  { href: "/admin/reviews",      label: "Reseñas"  },
+  { href: "/admin/banned-words", label: "Palabras" },
 ]
 
 export function Header() {
