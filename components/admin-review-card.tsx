@@ -1,20 +1,22 @@
 import { StarRating } from "./star-rating"
 import { formatDateFull } from "@/lib/date-utils"
 import { updateReviewStatus } from "@/app/admin/reviews/actions"
+import { highlightBannedWords } from "@/lib/word-filter"
 
 type ReviewStatus = "pending" | "approved" | "rejected"
 
 interface AdminReviewCardProps {
-  id:              string
-  jobId:           string
-  reviewerId:      string
-  revieweeId:      string
-  revieweeType:    "professional" | "client"
-  rating:          number
-  comment:         string | null
-  status:          ReviewStatus
-  createdAt:       Date | string
+  id:               string
+  jobId:            string
+  reviewerId:       string
+  revieweeId:       string
+  revieweeType:     "professional" | "client"
+  rating:           number
+  comment:          string | null
+  status:           ReviewStatus
+  createdAt:        Date | string
   showStatusBadge?: boolean
+  bannedWords:      string[]
 }
 
 const statusConfig: Record<ReviewStatus, { label: string; className: string }> = {
@@ -38,6 +40,7 @@ export function AdminReviewCard({
   status,
   createdAt,
   showStatusBadge = true,
+  bannedWords,
 }: AdminReviewCardProps) {
   const isProfReview = revieweeType === "professional"
   const sc = statusConfig[status]
@@ -80,7 +83,7 @@ export function AdminReviewCard({
       {/* Comentario */}
       <div className="mt-3 min-h-8">
         {comment ? (
-          <p className="text-sm text-foreground leading-relaxed">{comment}</p>
+          <HighlightedComment comment={comment} bannedWords={bannedWords} />
         ) : (
           <p className="text-sm italic text-muted-foreground">Sin comentario</p>
         )}
@@ -89,8 +92,8 @@ export function AdminReviewCard({
       {/* Metadata + acciones */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
         <div className="flex flex-wrap gap-x-4 gap-y-1">
-          <MetaField label="Job"     value={jobId}      />
-          <MetaField label="Autor"   value={reviewerId} />
+          <MetaField label="Job"      value={jobId}      />
+          <MetaField label="Autor"    value={reviewerId} />
           <MetaField label="Evaluado" value={revieweeId} />
         </div>
 
@@ -120,6 +123,32 @@ export function AdminReviewCard({
         </form>
       </div>
     </div>
+  )
+}
+
+function HighlightedComment({
+  comment,
+  bannedWords,
+}: {
+  comment: string
+  bannedWords: string[]
+}) {
+  const segments = highlightBannedWords(comment, bannedWords)
+  return (
+    <p className="text-sm text-foreground leading-relaxed">
+      {segments.map((seg, i) =>
+        seg.highlight ? (
+          <mark
+            key={i}
+            className="rounded bg-amber-100 px-0.5 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200"
+          >
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        )
+      )}
+    </p>
   )
 }
 

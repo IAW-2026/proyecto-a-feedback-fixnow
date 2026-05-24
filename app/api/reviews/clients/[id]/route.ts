@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { db } from "@/lib/db"
 import { withServiceAuth } from "@/lib/service-auth"
 import { parsePagination } from "@/lib/api-utils"
+import { getBannedWords, censorComment } from "@/lib/word-filter"
 
 export const GET = withServiceAuth(async (
   req: NextRequest,
@@ -13,7 +14,7 @@ export const GET = withServiceAuth(async (
   const { searchParams } = new URL(req.url)
   const { limit, skip } = parsePagination(searchParams)
 
-  const [reviews, { _avg, _count }] = await Promise.all([
+  const [reviews, { _avg, _count }, bannedWords] = await Promise.all([
     db.review.findMany({
       where: { revieweeId: clientId, revieweeType: "client", status: "approved" },
       orderBy: { createdAt: "desc" },
@@ -25,6 +26,7 @@ export const GET = withServiceAuth(async (
       _avg: { rating: true },
       _count: { rating: true },
     }),
+    getBannedWords(),
   ])
 
   if (_count.rating === 0) {
@@ -40,7 +42,7 @@ export const GET = withServiceAuth(async (
       job_id: r.jobId,
       reviewer_id: r.reviewerId,
       rating: r.rating,
-      comment: r.comment,
+      comment: censorComment(r.comment, bannedWords),
       created_at: r.createdAt,
     })),
   })

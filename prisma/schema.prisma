@@ -31,3 +31,11 @@ enum ReviewStatus {
   approved
   rejected
 }
+
+model BannedWord {
+  id        String   @id @default(uuid())
+  word      String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("banned_words")
+}

@@ -2,6 +2,7 @@ import type { Review } from "@prisma/client"
 import { unstable_cache } from "next/cache"
 import { LayoutList, Clock, CheckCircle, XCircle } from "lucide-react"
 import { db } from "@/lib/db"
+import { getBannedWords } from "@/lib/word-filter"
 import { Header } from "@/components/header"
 import { AdminReviewCard } from "@/components/admin-review-card"
 import { StatCard } from "@/components/stat-card"
@@ -61,14 +62,15 @@ export default async function AdminReviewsPage({
     ...(activeType   !== "all" && { revieweeType: activeType  }),
   }
 
-  // 2 queries en paralelo en lugar de 3: breakdown está cacheado por tag
-  const [reviews, breakdown] = await Promise.all([
+  // 3 queries en paralelo: breakdown cacheado por tag, bannedWords sin caché (tabla pequeña)
+  const [reviews, breakdown, bannedWords] = await Promise.all([
     db.review.findMany({
       where,
       orderBy: { createdAt: "desc" },
       take: 50,
     }),
     getBreakdown(),
+    getBannedWords(),
   ])
 
   // Derivar todos los conteos del único groupBy (status × revieweeType).
@@ -164,6 +166,7 @@ export default async function AdminReviewsPage({
                     status={review.status}
                     createdAt={review.createdAt}
                     showStatusBadge={activeStatus === "all"}
+                    bannedWords={bannedWords}
                   />
                 </div>
               ))}
