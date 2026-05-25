@@ -72,7 +72,7 @@ export function AdminReviewCard({
 
           {/* Rating */}
           <div className="flex items-center gap-1.5">
-            <StarRating value={rating} readonly size="sm" />
+            <StarRating value={rating} size="sm" />
             <span className="text-sm font-semibold text-foreground">{rating}.0</span>
           </div>
         </div>
