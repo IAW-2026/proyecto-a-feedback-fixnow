@@ -6,7 +6,6 @@ import { db } from "@/lib/db"
 export async function getBannedWords(): Promise<string[]> {
   const words = await db.bannedWord.findMany({
     select: { word: true },
-    orderBy: { createdAt: "asc" },
   })
   return words.map((w) => w.word)
 }

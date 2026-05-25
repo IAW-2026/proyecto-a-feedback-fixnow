@@ -27,6 +27,11 @@ const getBreakdown = unstable_cache(
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected"
 type TypeFilter   = "all" | "professional" | "client"
+type BreakdownRow = { status: string; revieweeType: string; _count: { _all: number } }
+
+function sumBreakdown(rows: BreakdownRow[], fn: (b: BreakdownRow) => boolean): number {
+  return rows.filter(fn).reduce((acc, b) => acc + b._count._all, 0)
+}
 
 function parseStatus(v?: string): StatusFilter {
   // "pending" es el default — sin parámetro o con valor inválido cae aquí
@@ -73,19 +78,15 @@ export default async function AdminReviewsPage({
     getBannedWords(),
   ])
 
-  // Derivar todos los conteos del único groupBy (status × revieweeType).
   // Cast explícito porque el genérico de Prisma no estrecha _count correctamente.
-  type BreakdownRow = { status: string; revieweeType: string; _count: { _all: number } }
   const rows = breakdown as BreakdownRow[]
-  const sum = (fn: (b: BreakdownRow) => boolean) =>
-    rows.filter(fn).reduce((acc, b) => acc + b._count._all, 0)
 
-  const totalCount    = sum(() => true)
-  const pendingCount  = sum(b => b.status === "pending")
-  const approvedCount = sum(b => b.status === "approved")
-  const rejectedCount = sum(b => b.status === "rejected")
-  const profCount     = sum(b => b.revieweeType === "professional")
-  const clientCount   = sum(b => b.revieweeType === "client")
+  const totalCount    = sumBreakdown(rows, () => true)
+  const pendingCount  = sumBreakdown(rows, b => b.status === "pending")
+  const approvedCount = sumBreakdown(rows, b => b.status === "approved")
+  const rejectedCount = sumBreakdown(rows, b => b.status === "rejected")
+  const profCount     = sumBreakdown(rows, b => b.revieweeType === "professional")
+  const clientCount   = sumBreakdown(rows, b => b.revieweeType === "client")
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
