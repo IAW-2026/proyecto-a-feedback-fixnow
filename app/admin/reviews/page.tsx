@@ -150,26 +150,21 @@ export default async function AdminReviewsPage({
             <ReviewEmptyState status={activeStatus} type={activeType} />
           ) : (
             <div className="space-y-3">
-              {reviews.map((review: Review, index) => (
-                <div
+              {reviews.map((review: Review) => (
+                <AdminReviewCard
                   key={review.id}
-                  className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <AdminReviewCard
-                    id={review.id}
-                    jobId={review.jobId}
-                    reviewerId={review.reviewerId}
-                    revieweeId={review.revieweeId}
-                    revieweeType={review.revieweeType}
-                    rating={review.rating}
-                    comment={review.comment}
-                    status={review.status}
-                    createdAt={review.createdAt}
-                    showStatusBadge={activeStatus === "all"}
-                    bannedWords={bannedWords}
-                  />
-                </div>
+                  id={review.id}
+                  jobId={review.jobId}
+                  reviewerId={review.reviewerId}
+                  revieweeId={review.revieweeId}
+                  revieweeType={review.revieweeType}
+                  rating={review.rating}
+                  comment={review.comment}
+                  status={review.status}
+                  createdAt={review.createdAt}
+                  showStatusBadge={activeStatus === "all"}
+                  bannedWords={bannedWords}
+                />
               ))}
             </div>
           )}
