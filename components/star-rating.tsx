@@ -1,14 +1,8 @@
-"use client"
-
-import { useState } from "react"
 import { cn } from "@/lib/utils"
 
 interface StarRatingProps {
   value?: number
-  onChange?: (value: number) => void
-  readonly?: boolean
   size?: "sm" | "md" | "lg"
-  showValue?: boolean
 }
 
 const sizeClasses = {
@@ -17,76 +11,22 @@ const sizeClasses = {
   lg: "w-8 h-8",
 }
 
-export function StarRating({
-  value = 0,
-  onChange,
-  readonly = false,
-  size = "md",
-  showValue = false,
-}: StarRatingProps) {
-  const [hoverValue, setHoverValue] = useState(0)
-
-  const displayValue = hoverValue || value
-
-  const handleClick = (rating: number) => {
-    if (!readonly && onChange) {
-      onChange(rating)
-    }
-  }
-
-  const handleMouseEnter = (rating: number) => {
-    if (!readonly) {
-      setHoverValue(rating)
-    }
-  }
-
-  const handleMouseLeave = () => {
-    if (!readonly) {
-      setHoverValue(0)
-    }
-  }
-
+export function StarRating({ value = 0, size = "md" }: StarRatingProps) {
   return (
-    <div className="flex items-center gap-1">
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((rating) => {
-          const filled = rating <= displayValue
-          const Tag = readonly ? "span" : "button"
-          return (
-            <Tag
-              key={rating}
-              {...(!readonly && {
-                type: "button" as const,
-                onClick: () => handleClick(rating),
-                onMouseEnter: () => handleMouseEnter(rating),
-                onMouseLeave: handleMouseLeave,
-              })}
-              className={cn(
-                "transition-transform",
-                !readonly && "hover:scale-110 cursor-pointer",
-                readonly && "cursor-default"
-              )}
-              aria-label={readonly ? undefined : `${rating} estrellas`}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className={cn(
-                  sizeClasses[size],
-                  "transition-colors",
-                  filled ? "fill-star text-star" : "fill-star-empty text-star-empty"
-                )}
-              >
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            </Tag>
-          )
-        })}
-      </div>
-      {showValue && (
-        <span className="ml-2 text-sm font-medium text-foreground">
-          {value.toFixed(1)}
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((rating) => (
+        <span key={rating}>
+          <svg
+            viewBox="0 0 24 24"
+            className={cn(
+              sizeClasses[size],
+              rating <= value ? "fill-star text-star" : "fill-star-empty text-star-empty"
+            )}
+          >
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
         </span>
-      )}
+      ))}
     </div>
   )
 }

@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation"
 import { useAuth, UserButton } from "@clerk/nextjs"
 
 const adminLinks = [
-  { href: "/admin/reviews", label: "Reseñas" },
+  { href: "/admin/reviews",      label: "Reseñas"   },
+  { href: "/admin/banned-words", label: "Palabras"  },
+  { href: "/admin/stats",        label: "Métricas"  },
 ]
 
 export function Header() {
@@ -14,7 +16,13 @@ export function Header() {
   const pathname = usePathname()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+    <header
+      className="sticky top-0 z-50 w-full border-b backdrop-blur"
+      style={{
+        background: "rgba(3, 29, 68, 0.92)",
+        borderColor: "rgba(4, 57, 94, 0.6)",
+      }}
+    >
       <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-3">
           <Image
@@ -25,10 +33,10 @@ export function Header() {
             className="rounded-lg"
           />
           <div className="flex flex-col">
-            <span className="font-display text-lg font-bold text-foreground">
+            <span className="font-display text-lg font-bold text-white">
               FixNow
             </span>
-            <span className="text-xs text-muted-foreground">Feedback</span>
+            <span className="text-xs" style={{ color: "#93afc7" }}>Feedback</span>
           </div>
         </Link>
 
@@ -42,15 +50,15 @@ export function Header() {
                     <Link
                       key={href}
                       href={href}
-                      className={`relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                        isActive
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className="relative rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                      style={{ color: isActive ? "#DAB785" : "#DAB785CC" }}
                     >
                       {label}
                       {isActive && (
-                        <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-foreground" />
+                        <span
+                          className="absolute inset-x-3 -bottom-px h-0.5 rounded-full"
+                          style={{ background: "#93afc7" }}
+                        />
                       )}
                     </Link>
                   )
@@ -61,7 +69,12 @@ export function Header() {
           ) : (
             <Link
               href="/sign-in"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              className="rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                color: "#DAB785",
+                border: "1px solid rgba(218,183,133,0.3)",
+              }}
             >
               Iniciar sesión
             </Link>

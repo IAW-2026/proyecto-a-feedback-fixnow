@@ -14,6 +14,7 @@ model Review {
   revieweeType RevieweeType
   rating       Int
   comment      String?
+  status       ReviewStatus @default(pending)
   createdAt    DateTime     @default(now())
 
   @@unique([reviewerId, jobId])
@@ -23,4 +24,18 @@ model Review {
 enum RevieweeType {
   professional
   client
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+model BannedWord {
+  id        String   @id @default(uuid())
+  word      String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("banned_words")
 }

@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   icons: {
     icon: [
+      {url:'favicon.ico'},
       {
         url: '/icon-light-32x32.png',
         media: '(prefers-color-scheme: light)',

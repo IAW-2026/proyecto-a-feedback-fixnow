@@ -1,44 +1,119 @@
-import Link from "next/link"
 import type { Review } from "@prisma/client"
-import { LayoutList, Star, UserCheck, Briefcase, MessageSquareOff, type LucideIcon } from "lucide-react"
+import { unstable_cache } from "next/cache"
+import { LayoutList, Clock, CheckCircle, XCircle } from "lucide-react"
 import { db } from "@/lib/db"
+import { getBannedWords } from "@/lib/word-filter"
 import { Header } from "@/components/header"
 import { AdminReviewCard } from "@/components/admin-review-card"
+import { StatCard } from "@/components/stat-card"
+import { FilterTab } from "@/components/filter-tab"
+import { ReviewEmptyState } from "@/components/review-empty-state"
 
 export const dynamic = "force-dynamic"
 
-type FilterType = "all" | "professional" | "client"
+/**
+ * Conteos globales por (status × revieweeType) — un solo query en lugar de dos.
+ * Se cachea con tag "review-breakdown": se invalida únicamente cuando el admin
+ * aprueba o rechaza una reseña, no en cada visita a la página.
+ */
+const getBreakdown = unstable_cache(
+  () => db.review.groupBy({
+    by: ["status", "revieweeType"],
+    _count: { _all: true },
+  }),
+  ["review-breakdown"],
+  { tags: ["review-breakdown"] },
+)
+
+type StatusFilter = "all" | "pending" | "approved" | "rejected"
+type TypeFilter   = "all" | "professional" | "client"
+type SortOption   = "date-desc" | "date-asc" | "rating-desc" | "rating-asc" | "flagged"
+type BreakdownRow = { status: string; revieweeType: string; _count: { _all: number } }
+
+function sumBreakdown(rows: BreakdownRow[], fn: (b: BreakdownRow) => boolean): number {
+  return rows.filter(fn).reduce((acc, b) => acc + b._count._all, 0)
+}
+
+function parseStatus(v?: string): StatusFilter {
+  // "pending" es el default — sin parámetro o con valor inválido cae aquí
+  if (v === "all" || v === "approved" || v === "rejected") return v
+  return "pending"
+}
+
+function parseType(v?: string): TypeFilter {
+  return v === "professional" || v === "client" ? v : "all"
+}
+
+function parseSort(v?: string): SortOption {
+  // "date-desc" es el default → URL limpia sin param
+  if (v === "date-asc" || v === "rating-desc" || v === "rating-asc" || v === "flagged") return v
+  return "date-desc"
+}
+
+/** Construye la URL preservando los tres filtros activos. */
+function buildUrl(status: StatusFilter, type: TypeFilter, sort: SortOption) {
+  const p = new URLSearchParams()
+  if (status !== "pending")   p.set("status", status)
+  if (type   !== "all")       p.set("type",   type)
+  if (sort   !== "date-desc") p.set("sort",   sort)
+  const qs = p.toString()
+  return `/admin/reviews${qs ? `?${qs}` : ""}`
+}
+
+/**
+ * Ordena las reseñas poniendo primero las que contienen palabras prohibidas.
+ * Se aplica en memoria después del fetch porque Prisma no conoce la lista de palabras.
+ */
+function sortByFlagged(reviews: Review[], bannedWords: string[]): Review[] {
+  if (bannedWords.length === 0) return reviews
+  const isFlagged = (comment: string | null) => {
+    if (!comment) return false
+    const lower = comment.toLowerCase()
+    return bannedWords.some(w => lower.includes(w))
+  }
+  return [...reviews].sort((a, b) => Number(isFlagged(b.comment)) - Number(isFlagged(a.comment)))
+}
 
 export default async function AdminReviewsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>
+  searchParams: Promise<{ status?: string; type?: string; sort?: string }>
 }) {
-  const { type } = await searchParams
-  const activeFilter: FilterType =
-    type === "professional" ? "professional" : type === "client" ? "client" : "all"
+  const { status, type, sort } = await searchParams
+  const activeStatus = parseStatus(status)
+  const activeType   = parseType(type)
+  const activeSort   = parseSort(sort)
 
-  // Traer reviews filtradas + stats globales en paralelo
-  const [reviews, stats, breakdown] = await Promise.all([
-    db.review.findMany({
-      where: activeFilter !== "all" ? { revieweeType: activeFilter } : {},
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    }),
-    db.review.aggregate({
-      _avg: { rating: true },
-      _count: { id: true },
-    }),
-    db.review.groupBy({
-      by: ["revieweeType"],
-      _count: { id: true },
-    }),
+  const where = {
+    ...(activeStatus !== "all" && { status:       activeStatus }),
+    ...(activeType   !== "all" && { revieweeType: activeType  }),
+  }
+
+  const orderBy =
+    activeSort === "date-asc"    ? { createdAt: "asc"  as const } :
+    activeSort === "rating-desc" ? { rating:    "desc" as const } :
+    activeSort === "rating-asc"  ? { rating:    "asc"  as const } :
+    { createdAt: "desc" as const } // date-desc y flagged — ambos traen por fecha desc desde DB
+
+  const [reviews, breakdown, bannedWords] = await Promise.all([
+    db.review.findMany({ where, orderBy }),
+    getBreakdown(),
+    getBannedWords(),
   ])
 
-  const totalCount = stats._count.id
-  const avgRating = stats._avg.rating ?? 0
-  const profCount = breakdown.find((b: { revieweeType: string }) => b.revieweeType === "professional")?._count.id ?? 0
-  const clientCount = breakdown.find((b: { revieweeType: string }) => b.revieweeType === "client")?._count.id ?? 0
+  const sortedReviews = activeSort === "flagged"
+    ? sortByFlagged(reviews, bannedWords)
+    : reviews
+
+  // Cast explícito porque el genérico de Prisma no estrecha _count correctamente.
+  const rows = breakdown as BreakdownRow[]
+
+  const totalCount    = sumBreakdown(rows, () => true)
+  const pendingCount  = sumBreakdown(rows, b => b.status === "pending")
+  const approvedCount = sumBreakdown(rows, b => b.status === "approved")
+  const rejectedCount = sumBreakdown(rows, b => b.status === "rejected")
+  const profCount     = sumBreakdown(rows, b => b.revieweeType === "professional")
+  const clientCount   = sumBreakdown(rows, b => b.revieweeType === "client")
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -58,141 +133,90 @@ export default async function AdminReviewsPage({
 
           {/* Stats */}
           <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard label="Total reseñas" value={totalCount} icon={LayoutList} accent="navy" />
-            <StatCard label="Promedio general" value={`${avgRating.toFixed(1)}`} icon={Star} accent="gold" />
-            <StatCard label="Cliente → Profesional" value={profCount} icon={UserCheck} accent="blue" />
-            <StatCard label="Profesional → Cliente" value={clientCount} icon={Briefcase} accent="purple" />
+            <StatCard label="Total reseñas" value={totalCount}    icon={LayoutList}  accent="navy"  />
+            <StatCard label="Pendientes"    value={pendingCount}  icon={Clock}       accent="amber" />
+            <StatCard label="Aprobadas"     value={approvedCount} icon={CheckCircle} accent="green" />
+            <StatCard label="Rechazadas"    value={rejectedCount} icon={XCircle}     accent="red"   />
           </div>
 
-          {/* Filtros */}
-          <div className="mb-6 flex gap-2">
-            <FilterTab href="/admin/reviews" active={activeFilter === "all"}>
+          {/* ── Fila 1: filtro por estado ── */}
+          <div className="mb-2 flex flex-wrap gap-2">
+            <FilterTab href={buildUrl("all",      activeType, activeSort)} active={activeStatus === "all"}>
               Todas ({totalCount})
             </FilterTab>
-            <FilterTab href="/admin/reviews?type=professional" active={activeFilter === "professional"}>
+            <FilterTab href={buildUrl("pending",  activeType, activeSort)} active={activeStatus === "pending"}  accent="amber">
+              Pendientes ({pendingCount})
+            </FilterTab>
+            <FilterTab href={buildUrl("approved", activeType, activeSort)} active={activeStatus === "approved"} accent="green">
+              Aprobadas ({approvedCount})
+            </FilterTab>
+            <FilterTab href={buildUrl("rejected", activeType, activeSort)} active={activeStatus === "rejected"} accent="red">
+              Rechazadas ({rejectedCount})
+            </FilterTab>
+          </div>
+
+          {/* ── Fila 2: filtro por tipo ── */}
+          <div className="mb-2 flex flex-wrap gap-2">
+            <FilterTab href={buildUrl(activeStatus, "all",          activeSort)} active={activeType === "all"}          size="sm">
+              Todos los tipos
+            </FilterTab>
+            <FilterTab href={buildUrl(activeStatus, "professional", activeSort)} active={activeType === "professional"} size="sm">
               <span className="hidden sm:inline">Cliente → Profesional</span>
               <span className="sm:hidden">C → P</span>
               {" "}({profCount})
             </FilterTab>
-            <FilterTab href="/admin/reviews?type=client" active={activeFilter === "client"}>
+            <FilterTab href={buildUrl(activeStatus, "client",       activeSort)} active={activeType === "client"}       size="sm">
               <span className="hidden sm:inline">Profesional → Cliente</span>
               <span className="sm:hidden">P → C</span>
               {" "}({clientCount})
             </FilterTab>
           </div>
 
+          {/* ── Fila 3: ordenamiento ── */}
+          <div className="mb-6 flex flex-wrap gap-2">
+            <FilterTab href={buildUrl(activeStatus, activeType, "date-desc")}   active={activeSort === "date-desc"}   size="sm">
+              Más reciente
+            </FilterTab>
+            <FilterTab href={buildUrl(activeStatus, activeType, "date-asc")}    active={activeSort === "date-asc"}    size="sm">
+              Más antigua
+            </FilterTab>
+            <FilterTab href={buildUrl(activeStatus, activeType, "rating-desc")} active={activeSort === "rating-desc"} size="sm">
+              Mayor rating
+            </FilterTab>
+            <FilterTab href={buildUrl(activeStatus, activeType, "rating-asc")}  active={activeSort === "rating-asc"}  size="sm">
+              Menor rating
+            </FilterTab>
+            <FilterTab href={buildUrl(activeStatus, activeType, "flagged")}     active={activeSort === "flagged"}     size="sm" accent="red">
+              Palabras prohibidas
+            </FilterTab>
+          </div>
+
           {/* Lista */}
-          {reviews.length === 0 ? (
-            <EmptyState filter={activeFilter} />
+          {sortedReviews.length === 0 ? (
+            <ReviewEmptyState status={activeStatus} type={activeType} />
           ) : (
             <div className="space-y-3">
-              {reviews.map((review: Review, index) => (
-                <div
+              {sortedReviews.map((review: Review) => (
+                <AdminReviewCard
                   key={review.id}
-                  className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <AdminReviewCard
-                    id={review.id}
-                    jobId={review.jobId}
-                    reviewerId={review.reviewerId}
-                    revieweeId={review.revieweeId}
-                    revieweeType={review.revieweeType}
-                    rating={review.rating}
-                    comment={review.comment}
-                    createdAt={review.createdAt}
-                  />
-                </div>
+                  id={review.id}
+                  jobId={review.jobId}
+                  reviewerId={review.reviewerId}
+                  revieweeId={review.revieweeId}
+                  revieweeType={review.revieweeType}
+                  rating={review.rating}
+                  comment={review.comment}
+                  status={review.status}
+                  createdAt={review.createdAt}
+                  showStatusBadge={activeStatus === "all"}
+                  bannedWords={bannedWords}
+                />
               ))}
             </div>
           )}
 
-          {reviews.length === 50 && (
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              Mostrando las últimas 50 reseñas
-            </p>
-          )}
         </div>
       </main>
     </div>
-  )
-}
-
-/* ——— Subcomponentes de layout ——— */
-
-const accentStyles = {
-  navy:   { border: "#031D44", iconBg: "bg-slate-100",   iconColor: "text-slate-700",   value: "text-foreground" },
-  gold:   { border: "#DAB785", iconBg: "bg-amber-50",    iconColor: "text-amber-600",   value: "text-foreground" },
-  blue:   { border: "#3b82f6", iconBg: "bg-blue-50",     iconColor: "text-blue-600",    value: "text-blue-600"   },
-  purple: { border: "#a855f7", iconBg: "bg-purple-50",   iconColor: "text-purple-600",  value: "text-purple-600" },
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  accent = "navy",
-}: {
-  label: string
-  value: string | number
-  icon: LucideIcon
-  accent?: keyof typeof accentStyles
-}) {
-  const s = accentStyles[accent]
-
-  return (
-    <div
-      className="rounded-xl border border-border bg-card p-4"
-      style={{ borderLeft: `3px solid ${s.border}` }}
-    >
-      <div className="flex items-start justify-between">
-        <p className="text-xs text-muted-foreground leading-snug">{label}</p>
-        <span className={`rounded-md p-1.5 ${s.iconBg}`}>
-          <Icon className={`h-3.5 w-3.5 ${s.iconColor}`} />
-        </span>
-      </div>
-      <p className={`mt-2 font-display text-2xl font-bold ${s.value}`}>{value}</p>
-    </div>
-  )
-}
-
-const emptyMessages: Record<FilterType, string> = {
-  all:          "Todavía no hay reseñas en el sistema",
-  professional: "No hay reseñas de clientes sobre profesionales",
-  client:       "No hay reseñas de profesionales sobre clientes",
-}
-
-function EmptyState({ filter }: { filter: FilterType }) {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
-      <div className="mb-4 rounded-full bg-muted p-4">
-        <MessageSquareOff className="h-7 w-7 text-muted-foreground" />
-      </div>
-      <p className="font-display text-base font-semibold text-foreground">Sin reseñas</p>
-      <p className="mt-1 text-sm text-muted-foreground">{emptyMessages[filter]}</p>
-    </div>
-  )
-}
-
-function FilterTab({
-  href,
-  active,
-  children,
-}: {
-  href: string
-  active: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-        active
-          ? "bg-foreground text-background"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-      }`}
-    >
-      {children}
-    </Link>
   )
 }

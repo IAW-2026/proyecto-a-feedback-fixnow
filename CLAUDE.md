@@ -1,102 +1,165 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guía de contexto para Claude Code al trabajar en este repositorio.
 
-## Commands
+## Comandos
 
 ```bash
-pnpm dev        # Start dev server
-pnpm build      # Production build
-pnpm start      # Start production server
-pnpm lint       # Run ESLint
+pnpm dev                        # Servidor de desarrollo
+pnpm build                      # Build de producción (corre prisma generate primero)
+pnpm lint                       # ESLint
+pnpm exec prisma db push        # Aplicar cambios del schema sin migración
+pnpm exec prisma migrate dev    # Crear y aplicar migración
+pnpm exec prisma db seed        # Seedear la DB con datos de prueba
+pnpm exec tsc --noEmit          # Verificar tipos sin compilar
 ```
 
-## Project context
+## Contexto del proyecto
 
-This is **Feedback App**, one of four microservices in the FixNow platform (Type Transport). The four apps are:
+**Feedback App** es uno de cuatro microservicios del proyecto universitario FixNow.
+Las cuatro apps son: Rider App, Driver App, Payments App, Feedback App.
 
-- Rider App
-- Driver App
-- Payments App
-- Feedback App
+**Ninguna app accede directamente a la DB de otra** — toda comunicación cross-app es vía HTTP REST con JSON, autenticada con un service token compartido (`Authorization: Bearer <service-token>`, variable `INTERNAL_API_SECRET`).
 
-**No app accesses another app's database directly** — all cross-app communication is via HTTP REST with JSON, authenticated via a shared `INTERNAL_API_SECRET` service token (`Authorization: Bearer <service-token>`).
+**En esta etapa**, las llamadas salientes hacia otras apps (ej: actualizar rating en Driver App) deben mockearse o simularse — no existen realmente.
 
-**Calls to APIs from other web apps must be mocked or simulated during this stage.**
+## Responsabilidades de esta app
 
+- Recibe reseñas de Rider App (cliente califica profesional) y Driver App (profesional califica cliente)
+- Expone historial de reseñas consumido por Rider y Driver apps
+- Tras guardar una reseña sobre un profesional, **debería** llamar a Driver App para actualizar su rating promedio (pendiente de implementación real)
 
-## Feedback App responsibilities
-
-- Receives reviews from **Rider App** (client rates professional) and **Driver App** (professional rates client)
-- Exposes review history endpoints consumed by Rider and Driver apps
-- After saving a review about a professional, **must call Driver App** to update that professional's average rating
-
-### Endpoints this app exposes
+### Endpoints que expone esta app
 
 ```
-POST /api/reviews/from-client          # Called by Rider App
-POST /api/reviews/from-professional    # Called by Driver App
-GET  /api/reviews/professionals/[id]   # Called by Rider App
-GET  /api/reviews/clients/[id]         # Called by Driver App
+POST /api/reviews/from-client          # Llamado por Rider App
+POST /api/reviews/from-professional    # Llamado por Driver App
+GET  /api/reviews/professionals/[id]   # Llamado por Rider App
+GET  /api/reviews/clients/[id]         # Llamado por Driver App
 ```
 
-All these endpoints are inter-service and protected with service token, not Clerk JWT.
+Todos protegidos con `withServiceAuth()` — no usan Clerk JWT.
 
-### Outgoing call this app makes
+### Llamada saliente
 
 ```
-PUT /api/professionals/[professional_id]/rating   # Called by this app → Driver App
+PUT /api/professionals/[id]/rating    # Esta app → Driver App (mockeable en Stage 1)
 ```
 
-## Data model
+## Modelo de datos actual
 
-**Review** (owned by this app)
-- `id`: UUID
-- `job_id`: UUID (external ref to Rider App)
-- `reviewer_id`: UUID (Clerk user_id)
-- `reviewee_id`: UUID (Clerk user_id)
-- `reviewee_type`: `professional` | `client`
-- `rating`: Integer 1–5
-- `comment`: String
+```prisma
+model Review {
+  id           String       @id @default(uuid())
+  jobId        String
+  reviewerId   String
+  revieweeId   String
+  revieweeType RevieweeType  // professional | client
+  rating       Int           // 1–5
+  comment      String?
+  createdAt    DateTime      @default(now())
 
-Business rules:
-- One review per `reviewer_id` per `job_id` (409 if duplicate)
-- `rating` must be integer between 1 and 5 inclusive
-- Reviews are only created when the Job status is `completed`
+  @@unique([reviewerId, jobId])  // una reseña por usuario por trabajo
+}
+```
 
-## Authentication
+Reglas de negocio:
+- Una reseña por `reviewerId` + `jobId` (409 si duplicado)
+- `rating` entero entre 1 y 5
+- Las reseñas se crean solo cuando el Job está en estado `completed`
 
-Two separate auth layers:
-1. **End users (frontend):** Clerk JWT — `Authorization: Bearer <clerk_jwt>`. Admins only for this app's own frontend (moderation panel).
-2. **Inter-service (API routes):** `INTERNAL_API_SECRET` env var — validated in `Authorization: Bearer <service-token>` header.
+### Cambio planeado — moderación de reseñas
 
-Clerk JWT claims used: `sub` (maps to `reviewer_id`/`reviewee_id`), `role` (`client` | `professional` | `admin`).
+Agregar campo `status` con enum `ReviewStatus`:
 
-## Tech stack
+```prisma
+enum ReviewStatus {
+  pending    // recién creada, en cola de moderación
+  approved   // aprobada por el admin, visible en las otras apps
+  rejected   // rechazada, no se expone
+}
+```
 
-- **Next.js 16** (App Router) + **React 19** + **TypeScript 5.7** **Use Typescript in strict mode**
-- **Tailwind CSS v4** — uses `@tailwindcss/postcss`, no `tailwind.config.js`
-- **shadcn/ui** (Radix UI) — components are in `components/ui/`, pre-installed and ready to use
-- **React Hook Form** + **Zod** for form validation
-- **Clerk** for authentication (not yet integrated — pending Stage 2)
-- **Vercel** for deployment
-- **ORM**: Prisma + PostgreSQL
-- **SupaBase** BaaS
+- Las APIs de lectura (`/professionals/[id]`, `/clients/[id]`) filtrarán `status: "approved"`
+- El panel admin tendrá acciones Aprobar / Rechazar por reseña
+- Al crear una reseña, el default es `pending`
 
-## Current state (Stage 1 — UI/UX)
+## Autenticación
 
-All data is mocked. There is no database or real API yet. Mock data lives directly in page components. The app is deployed individually on Vercel with hardcoded demo data to demonstrate the UI before Stage 2 integration.
+Dos capas separadas:
 
-Key mock locations:
-- `app/reviews/history/page.tsx` — `mockProfessionalReviews`, `mockClientReviews`
-- `app/reviews/new/page.tsx` — hardcoded `revieweeName="Carlos Mendez"`
+1. **Frontend (admin):** Clerk v7 — `requireAdmin()` en `app/admin/layout.tsx`
+2. **APIs inter-servicio:** `INTERNAL_API_SECRET` — validado en `withServiceAuth()` de `lib/service-auth.ts`
 
-When implementing Stage 2, each `POST /api/reviews/*` route must end by calling Driver App's rating endpoint. The `job_id`, `reviewer_id`, and `reviewee_id` will come from Clerk session + query params, not from the form.
+`INTERNAL_API_SECRET` actual: `"fixnow-dev-secret-2026"` — coordinar valor definitivo con el equipo antes de producción. Agregar también en variables de entorno de Vercel.
 
-## UI conventions
+## Stack técnico
 
-- Spanish language throughout — use proper accents (ó, é, á, í, ú, ¿, ¡)
-- `font-display` (Space Grotesk) for headings, `font-sans` (Inter) for body
-- Color tokens via CSS variables in `oklch` format — never hardcode colors outside of Tailwind utility classes
-- Star colors use `fill-star` / `fill-star-empty` custom tokens defined in `globals.css`
-- `StarRating` component: use `readonly` prop for display-only, which renders `<span>` elements instead of `<button>`
+- **Next.js** (App Router) + **React 19** + **TypeScript 5.7 strict mode**
+- **Tailwind CSS v4** — sin `tailwind.config.js`, usa `globals.css` con `@theme inline`. Variante de supports: `supports-backdrop-filter:`, no `supports-[...]:`
+- **shadcn/ui** (Radix UI) — componentes en `components/ui/`
+- **Clerk v7** — `usePathname`, `useAuth`, `UserButton`, `requireAdmin()`. No usar `afterSignOutUrl` en `UserButton` (prop inválido en v7)
+- **Prisma v7** + `@prisma/adapter-pg` + `pg` Pool
+  - Config en `prisma.config.ts` (no en `package.json`)
+  - Sin `url` en `schema.prisma` — la datasource la maneja `prisma.config.ts`
+  - Seed: `migrations.seed = "tsx prisma/seed.ts"` en `prisma.config.ts`
+- **PostgreSQL** vía Supabase — pooler para runtime, URL directa para migraciones
+- **Vercel** para deploy — el build script es `prisma generate && next build`
+
+## Estructura de archivos clave
+
+```
+app/
+  admin/
+    layout.tsx              # requireAdmin() — protege todo /admin
+    reviews/page.tsx        # Panel de moderación con stats, filtros y cards
+  api/reviews/
+    from-client/route.ts
+    from-professional/route.ts
+    professionals/[id]/route.ts
+    clients/[id]/route.ts
+  sign-in/[[...sign-in]]/page.tsx   # Stats dinámicas desde DB en panel izquierdo
+  page.tsx                  # Homepage pública (mínima)
+
+components/
+  header.tsx                # Nav con active indicator via usePathname()
+  admin-review-card.tsx     # Card de reseña para el panel admin
+  star-rating.tsx           # Reutilizado por admin-review-card
+
+lib/
+  db.ts                     # PrismaClient con Pool adapter
+  clerk.ts                  # requireAdmin(), helpers de Clerk
+  service-auth.ts           # withServiceAuth() wrapper para APIs inter-servicio
+  api-utils.ts              # parsePagination()
+  date-utils.ts             # formatDateRelative(), formatDateFull()
+  utils.ts                  # cn() de shadcn
+
+prisma/
+  schema.prisma
+  seed.ts                   # 15 reseñas de prueba (9 prof + 6 client)
+```
+
+## Convenciones de UI
+
+- **Idioma:** español con tildes correctas (ó, é, á, í, ú, ¿, ¡)
+- **Tipografía:** `font-display` (Space Grotesk) para títulos, `font-sans` (Inter) para cuerpo
+- **Colores de marca:** `#031D44` (navy oscuro), `#04395E` (navy medio), `#DAB785` (dorado)
+- Tokens de color vía variables CSS en formato `oklch` en `globals.css` — no hardcodear colores fuera de clases Tailwind
+- Animaciones de entrada: `animate-in fade-in slide-in-from-bottom-2 duration-300` + `animationDelay` escalonado (de `tw-animate-css`, ya instalado)
+- `StarRating`: prop `readonly` para solo lectura (renderiza `<span>`, no `<button>`)
+
+## Ramas git
+
+- `main` — producción / deploy en Vercel (sincronizada con `features`)
+- `features` — rama de desarrollo principal, base para PRs
+- `features-simulador` — página `/admin/simulate` para probar APIs sin otras apps (pendiente decidir si se integra)
+
+## Estado actual
+
+La app está completamente funcional con DB real:
+- APIs inter-servicio operativas y protegidas
+- Panel admin con stats, filtros, animaciones y empty state
+- Autenticación Clerk funcionando
+- Seed de 15 reseñas de prueba en Supabase
+
+**Próximo paso planeado:** implementar sistema de moderación con `status` en el modelo `Review` (pending → approved/rejected desde el panel admin).
