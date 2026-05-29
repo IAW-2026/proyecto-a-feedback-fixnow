@@ -1,10 +1,20 @@
+import { timingSafeEqual } from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 
-export function validateServiceToken(req: NextRequest): boolean {
+function validateServiceToken(req: NextRequest): boolean {
   const authHeader = req.headers.get("authorization")
   if (!authHeader?.startsWith("Bearer ")) return false
-  const token = authHeader.slice(7)
-  return token === process.env.INTERNAL_API_SECRET
+
+  const token  = authHeader.slice(7)
+  const secret = process.env.INTERNAL_API_SECRET
+  if (!secret) return false
+
+  try {
+    return timingSafeEqual(Buffer.from(token), Buffer.from(secret))
+  } catch {
+    // Buffer lengths differ → tokens no coinciden
+    return false
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
