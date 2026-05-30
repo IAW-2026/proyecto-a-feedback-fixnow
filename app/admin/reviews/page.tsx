@@ -30,27 +30,29 @@ type TypeFilter   = "all" | "professional" | "client"
 type SortOption   = "date-desc" | "date-asc" | "rating-desc" | "rating-asc" | "flagged"
 type BreakdownRow = { status: string; revieweeType: string; _count: { _all: number } }
 
+/** Suma los conteos del groupBy filtrando con un predicado. */
 function sumBreakdown(rows: BreakdownRow[], fn: (b: BreakdownRow) => boolean): number {
   return rows.filter(fn).reduce((acc, b) => acc + b._count._all, 0)
 }
 
+/** Convierte el parámetro de URL en un StatusFilter válido. Sin parámetro devuelve "pending". */
 function parseStatus(v?: string): StatusFilter {
-  // "pending" es el default — sin parámetro o con valor inválido cae aquí
   if (v === "all" || v === "approved" || v === "rejected") return v
   return "pending"
 }
 
+/** Convierte el parámetro de URL en un TypeFilter válido. Sin parámetro devuelve "all". */
 function parseType(v?: string): TypeFilter {
   return v === "professional" || v === "client" ? v : "all"
 }
 
+/** Convierte el parámetro de URL en un SortOption válido. Sin parámetro devuelve "date-desc". */
 function parseSort(v?: string): SortOption {
-  // "date-desc" es el default → URL limpia sin param
   if (v === "date-asc" || v === "rating-desc" || v === "rating-asc" || v === "flagged") return v
   return "date-desc"
 }
 
-/** Construye la URL preservando los tres filtros activos. */
+/** Construye la URL preservando los tres filtros activos. Los valores default se omiten para mantener URLs limpias. */
 function buildUrl(status: StatusFilter, type: TypeFilter, sort: SortOption) {
   const p = new URLSearchParams()
   if (status !== "pending")   p.set("status", status)
@@ -61,8 +63,8 @@ function buildUrl(status: StatusFilter, type: TypeFilter, sort: SortOption) {
 }
 
 /**
- * Ordena las reseñas poniendo primero las que contienen palabras prohibidas.
- * Se aplica en memoria después del fetch porque Prisma no conoce la lista de palabras.
+ * Reordena las reseñas poniendo primero las que contienen palabras prohibidas.
+ * Se hace en memoria porque Prisma no puede ordenar por este criterio a nivel DB.
  */
 function sortByFlagged(reviews: Review[], bannedWords: string[]): Review[] {
   if (bannedWords.length === 0) return reviews
