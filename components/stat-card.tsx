@@ -4,7 +4,7 @@ const accentStyles = {
   navy:  { border: "#031D44", iconBg: "bg-slate-100", iconColor: "text-slate-700", value: "text-foreground" },
   amber: { border: "#d97706", iconBg: "bg-amber-50",  iconColor: "text-amber-600", value: "text-amber-600"  },
   green: { border: "#16a34a", iconBg: "bg-green-50",  iconColor: "text-green-600", value: "text-green-600"  },
-  red:   { border: "#dc2626", iconBg: "bg-red-50",    iconColor: "text-red-600",   value: "text-red-600"    },
+  red:   { border: "#b31b1b", iconBg: "bg-red-50",    iconColor: "text-red-600",   value: "text-red-600"    },
 }
 
 export type StatCardAccent = keyof typeof accentStyles

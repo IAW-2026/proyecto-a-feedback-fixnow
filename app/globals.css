@@ -37,9 +37,8 @@
 }
 
 @theme inline {
-  --font-display:                    'Space Grotesk', 'Space Grotesk Fallback', sans-serif;
-  --font-sans:                       'Inter', 'Inter Fallback', sans-serif;
-  --font-mono:                       'Geist Mono', 'Geist Mono Fallback', monospace;
+  /* Las fuentes las gestiona next/font — setea --font-display y --font-sans en <html> */
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
   --color-background:                var(--background);
   --color-foreground:                var(--foreground);
   --color-card:                      var(--card);
