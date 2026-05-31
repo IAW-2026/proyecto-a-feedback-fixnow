@@ -31,7 +31,7 @@ export async function updateReviewStatus(formData: FormData) {
       _count: { rating: true },
     })
 
-    await updateProfessionalRating(
+    await updateProfessionalRating(//hacer el PUT en profesional.
       review.revieweeId,
       Number((_avg.rating ?? 0).toFixed(2)),
       _count.rating,

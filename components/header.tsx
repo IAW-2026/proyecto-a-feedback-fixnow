@@ -81,6 +81,34 @@ export function Header() {
           )}
         </div>
       </div>
+
+      {/* Mobile nav row — visible solo en pantallas pequeñas cuando el usuario está autenticado */}
+      {isSignedIn && (
+        <div
+          className="flex sm:hidden overflow-x-auto px-4 pb-2"
+          style={{ borderTop: "1px solid rgba(4, 57, 94, 0.6)" }}
+        >
+          {adminLinks.map(({ href, label }) => {
+            const isActive = pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className="relative mr-1 shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                style={{ color: isActive ? "#DAB785" : "#DAB785CC" }}
+              >
+                {label}
+                {isActive && (
+                  <span
+                    className="absolute inset-x-3 -bottom-px h-0.5 rounded-full"
+                    style={{ background: "#93afc7" }}
+                  />
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </header>
   )
 }
