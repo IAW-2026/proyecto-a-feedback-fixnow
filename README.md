@@ -6,7 +6,7 @@ Aplicación **Feedback** del [Proyecto IAW 2026](https://iaw-2026.github.io/proy
 Esta app corresponde al módulo de reseñas y calificaciones en los proyectos de tipo **A (Transporte)**,
 
 ---
-### 1- Link de Deploy de producción: <https://proyecto-a-feedback-fixnow.vercel.app>
+### 1- Link a Deploy de producción: <https://proyecto-a-feedback-fixnow.vercel.app>
 ---
 ### 2- Usuarios disponibles:
       user: admin+clerk_test@iaw.com
