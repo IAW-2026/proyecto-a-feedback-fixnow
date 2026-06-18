@@ -23,7 +23,7 @@ export const POST = withServiceAuth(async (req: NextRequest) => {
   const { job_id, client_id, professional_id, rating, comment } = parsed.data
 
   const existing = await db.review.findUnique({
-    where: { reviewerId_jobId: { reviewerId: client_id, jobId: job_id } },
+    where: { reviewerId_jobId: { reviewerId: client_id, jobId: job_id,status: "approved" } },
   })
   if (existing) {
     return NextResponse.json({ error: "Review already exists for this job" }, { status: 409 })

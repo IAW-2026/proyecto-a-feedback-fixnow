@@ -1,22 +1,21 @@
+import type { ReviewStatus, RevieweeType } from "@prisma/client"
 import { StarRating } from "./star-rating"
 import { formatDateFull } from "@/lib/date-utils"
 import { updateReviewStatus } from "@/app/admin/reviews/actions"
 import { highlightBannedWords } from "@/lib/word-filter"
 
-type ReviewStatus = "pending" | "approved" | "rejected"
-
 interface AdminReviewCardProps {
-  id:               string
-  jobId:            string
-  reviewerId:       string
-  revieweeId:       string
-  revieweeType:     "professional" | "client"
-  rating:           number
-  comment:          string | null
-  status:           ReviewStatus
-  createdAt:        Date | string
-  showStatusBadge?: boolean
-  bannedWords:      string[]
+  id:              string
+  jobId:           string
+  reviewerId:      string
+  revieweeId:      string
+  revieweeType:    RevieweeType
+  rating:          number
+  comment:         string | null
+  status:          ReviewStatus
+  createdAt:       Date | string
+  showStatusBadge: boolean
+  bannedWords:     string[]
 }
 
 const statusConfig: Record<ReviewStatus, { label: string; className: string }> = {
