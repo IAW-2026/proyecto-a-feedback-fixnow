@@ -13,11 +13,17 @@ export async function updateReviewStatus(formData: FormData) {
 
   if (!id || !["approved", "rejected"].includes(status)) return
 
-  // update retorna la reseña actualizada — evita un query extra para leer revieweeType
-  const review = await db.review.update({
-    where: { id },
-    data:  { status },
-  })
+  const reason =
+    status === "approved"
+      ? "Aprobada manualmente por el administrador."
+      : "Rechazada manualmente por el administrador."
+
+  const [review] = await Promise.all([
+    db.review.update({ where: { id }, data: { status } }),
+    db.moderationLog.create({
+      data: { reviewId: id, decision: status, reason, decidedBy: "human" },
+    }),
+  ])
 
   // updateTag invalida el cache desde un Server Action (read-your-own-writes)
   updateTag("review-breakdown")

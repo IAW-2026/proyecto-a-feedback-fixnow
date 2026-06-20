@@ -34,6 +34,8 @@ export async function updateProfessionalRating(
     }
   )
 
+  console.log(res);
+
   if (!res.ok) {
     // La reseña ya fue guardada — no revertimos, solo logueamos
     console.error("[Driver App] updateProfessionalRating falló", {

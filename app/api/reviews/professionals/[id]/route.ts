@@ -29,10 +29,6 @@ export const GET = withServiceAuth(async (
     getBannedWords(),
   ])
 
-  if (_count.rating === 0) {
-    return NextResponse.json({ error: "No reviews found" }, { status: 404 })
-  }
-
   return NextResponse.json({
     professional_id: professionalId,
     average_rating: Number((_avg.rating ?? 0).toFixed(2)),

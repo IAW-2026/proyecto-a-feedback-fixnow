@@ -1,4 +1,4 @@
-import type { ReviewStatus, RevieweeType } from "@prisma/client"
+import type { ReviewStatus, RevieweeType, ModerationLog } from "@prisma/client"
 import { StarRating } from "./star-rating"
 import { formatDateFull } from "@/lib/date-utils"
 import { updateReviewStatus } from "@/app/admin/reviews/actions"
@@ -16,6 +16,7 @@ interface AdminReviewCardProps {
   createdAt:       Date | string
   showStatusBadge: boolean
   bannedWords:     string[]
+  moderationLog:   ModerationLog | null
 }
 
 const statusConfig: Record<ReviewStatus, { label: string; className: string }> = {
@@ -26,6 +27,18 @@ const statusConfig: Record<ReviewStatus, { label: string; className: string }> =
 
 function truncate(str: string, len = 18): string {
   return str.length > len ? str.slice(0, len) + "…" : str
+}
+
+const decisionLabel: Record<ReviewStatus, string> = {
+  pending:  "Pendiente",
+  approved: "Aprobada",
+  rejected: "Rechazada",
+}
+
+const decisionColor: Record<ReviewStatus, string> = {
+  pending:  "text-amber-600 dark:text-amber-400",
+  approved: "text-green-600 dark:text-green-400",
+  rejected: "text-red-600 dark:text-red-400",
 }
 
 export function AdminReviewCard({
@@ -40,6 +53,7 @@ export function AdminReviewCard({
   createdAt,
   showStatusBadge = true,
   bannedWords,
+  moderationLog,
 }: AdminReviewCardProps) {
   const isProfReview = revieweeType === "professional"
   const sc = statusConfig[status]
@@ -87,6 +101,23 @@ export function AdminReviewCard({
           <p className="text-sm italic text-muted-foreground">Sin comentario</p>
         )}
       </div>
+
+      {/* Log de moderación */}
+      {moderationLog && (
+        <details className="mt-3">
+          <summary className="cursor-pointer select-none text-xs font-medium text-muted-foreground">
+            {moderationLog.decidedBy === "ai" ? "🤖 Moderación IA" : "👤 Moderación humana"}
+            {" — "}
+            <span className={decisionColor[moderationLog.decision]}>
+              {decisionLabel[moderationLog.decision]}
+            </span>
+          </summary>
+          <div className="mt-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs">
+            <p className="leading-relaxed text-foreground">{moderationLog.reason}</p>
+            <p className="mt-1 text-muted-foreground">{formatDateFull(moderationLog.createdAt)}</p>
+          </div>
+        </details>
+      )}
 
       {/* Metadata + acciones */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">

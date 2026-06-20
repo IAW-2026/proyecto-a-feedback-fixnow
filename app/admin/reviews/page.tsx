@@ -1,4 +1,6 @@
-import type { Review } from "@prisma/client"
+import type { Review, ModerationLog } from "@prisma/client"
+
+type ReviewWithLog = Review & { moderationLogs: ModerationLog[] }
 import { unstable_cache } from "next/cache"
 import { LayoutList, Clock, CheckCircle, XCircle } from "lucide-react"
 import { db } from "@/lib/db"
@@ -66,7 +68,7 @@ function buildUrl(status: StatusFilter, type: TypeFilter, sort: SortOption) {
  * Reordena las reseñas poniendo primero las que contienen palabras prohibidas.
  * Se hace en memoria porque Prisma no puede ordenar por este criterio a nivel DB.
  */
-function sortByFlagged(reviews: Review[], bannedWords: string[]): Review[] {
+function sortByFlagged(reviews: ReviewWithLog[], bannedWords: string[]): ReviewWithLog[] {
   if (bannedWords.length === 0) return reviews
   const isFlagged = (comment: string | null) => {
     if (!comment) return false
@@ -98,7 +100,16 @@ export default async function AdminReviewsPage({
     { createdAt: "desc" as const } // date-desc y flagged — ambos traen por fecha desc desde DB
 
   const [reviews, breakdown, bannedWords] = await Promise.all([
-    db.review.findMany({ where, orderBy }),
+    db.review.findMany({
+      where,
+      orderBy,
+      include: {
+        moderationLogs: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    }),
     getBreakdown(),
     getBannedWords(),
   ])
@@ -198,7 +209,7 @@ export default async function AdminReviewsPage({
             <ReviewEmptyState status={activeStatus} type={activeType} />
           ) : (
             <div className="space-y-3">
-              {sortedReviews.map((review: Review) => (
+              {sortedReviews.map((review: ReviewWithLog) => (
                 <AdminReviewCard
                   key={review.id}
                   id={review.id}
@@ -212,6 +223,7 @@ export default async function AdminReviewsPage({
                   createdAt={review.createdAt}
                   showStatusBadge={activeStatus === "all"}
                   bannedWords={bannedWords}
+                  moderationLog={review.moderationLogs[0] ?? null}
                 />
               ))}
             </div>
