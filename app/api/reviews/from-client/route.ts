@@ -5,6 +5,7 @@ import { z } from "zod"
 import { db } from "@/lib/db"
 import { withServiceAuth } from "@/lib/service-auth"
 import { moderateReview } from "@/lib/ai-moderator"
+import { updateProfessionalRating } from "@/services/driver-app"
 
 const schema = z.object({
   job_id:          z.string().uuid(),
@@ -60,6 +61,20 @@ export const POST = withServiceAuth(async (req: NextRequest) => {
         },
       }),
     ])
+
+    if (modResult.decision === "approved") {
+      const { _avg, _count } = await db.review.aggregate({
+        where:  { revieweeId: review.revieweeId, revieweeType: "professional", status: "approved" },
+        _avg:   { rating: true },
+        _count: { rating: true },
+      })
+
+      await updateProfessionalRating(
+        review.revieweeId,
+        Number((_avg.rating ?? 0).toFixed(2)),
+        _count.rating,
+      )
+    }
   }
 
   return NextResponse.json(

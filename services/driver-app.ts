@@ -20,7 +20,7 @@ export async function updateProfessionalRating(
   }
 
   const res = await fetch(
-    `${baseUrl}/api/professionals/${professionalId}/rating`, //para cuando ya este la app para la etapa 3
+    `${baseUrl}/api/professionals/${professionalId}/rating`,
     {
       method: "PUT",
       headers: {
@@ -34,12 +34,19 @@ export async function updateProfessionalRating(
     }
   )
 
-  console.log(res);
-
   if (!res.ok) {
+    const body = await res.text().catch(() => "(sin cuerpo)")
     // La reseña ya fue guardada — no revertimos, solo logueamos
     console.error("[Driver App] updateProfessionalRating falló", {
       status:          res.status,
+      professionalId,
+      newAverageRating,
+      totalReviews,
+      body,
+    })
+  } else {
+    console.log("[Driver App] updateProfessionalRating OK", {
+      status: res.status,
       professionalId,
       newAverageRating,
       totalReviews,
