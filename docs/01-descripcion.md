@@ -12,41 +12,74 @@ También permite pedir servicios inmediatos o programarlos para otro momento.
 
 ## Actores del sistema
 
-| Actor       | Descripción                                         | Apps donde interactúa                  |
-|-------------|-----------------------------------------------------|----------------------------------------|
-| Cliente     | Solicita servicios para el hogar                    | Rider App, Payments App, Feedback App  |
-| Profesional | Realiza los servicios (plomero, electricista, gasista) | Driver App, Payments App, Feedback App |
+| Actor         | Descripción                                            | Apps donde interactúa                            |
+| ------------- | ------------------------------------------------------ | ------------------------------------------------ |
+| Cliente       | Solicita servicios para el hogar                       | Rider App, Payments App, Feedback App            |
+| Profesional   | Realiza los servicios (plomero, electricista, gasista) | Driver App, Payments App, Feedback App           |
+| Administrador | Moderar las distintas aplicaciones                     | Rider App, Driver App,Payments App, Feedback App |
 
 ## Flujo principal de uso
 
 **Flujo Inmediato (Punta a Punta)**
+
 1. **Login:** El cliente inicia sesión en la Rider App (vía Clerk).
 2. **Creación:** El cliente solicita un servicio. Se genera el `Job` con estado `pending`.
 3. **Matching:** Rider App notifica a Driver App, que muestra la solicitud a los profesionales disponibles.
 4. **Asignación:** Un profesional (logueado en Driver App) acepta el pedido. La Rider App actualiza el `Job` a `accepted`.
-5. **Ejecución:** Se realiza el trabajo. Driver App notifica a Rider App y el `Job` pasa a `completed`.
+5. **Ejecución:** Se realiza el trabajo. Driver App notifica a Rider App y el `Job` pasa a `completed`, actualizando el precio de ser necesario.
 6. **Cobro:** El cliente es redirigido a Payments App (mantiene sesión de Clerk), donde procesa el pago.
-7. **Feedback:** El cliente y el profesional ingresan a la Feedback App para calificarse mutuamente.
+7. **Feedback:** El cliente y el profesional interactuan con la Feedback App para calificarse mutuamente, a la espera de que un moderador apruebe o rechace la reseña.
+
+---
 
 **Flujo Modificar**
+
 1. El cliente inicia sesión en Rider App y visualiza un `Job` en estado `pending`.
-2. Modifica la descripción o dirección. Rider App actualiza la base de datos y notifica los cambios a Driver App. 
-*(Nota: Si el Job ya está en estado `accepted` o `in_progress`, no se puede modificar; debe ser cancelado).*
+2. Modifica la descripción, tipo de servicio, dirección o fecha/hora (si es un turno programado).
+3. Rider App actualiza la base de datos local y notifica los cambios mediante una petición PATCH a Driver App.
+   _(Nota: Si el Job ya está en estado `accepted` o `in_progress`, no se puede modificar; debe ser cancelado)._
 
 **Flujo Intermedio (Programado)**
+
 1. El cliente crea un `Job` para una fecha y hora futura (estado `pending`).
 2. Los profesionales revisan los trabajos programados en la Driver App.
 3. Alguien lo acepta (pasa a `accepted`). Llegado el día, se ejecuta el Flujo Inmediato desde el paso 5.
 
+> **Nota de Integración (Etapa 2):** Debido a una simplificación temporal en el contrato de la Driver App, la lógica de simulación, timeout y asignación de los turnos programados fue resuelta y absorbida completamente de manera interna por la Rider App mediante mocks. La integración real de este flujo queda pendiente de una actualización en la Driver App para la Etapa 3.
+
 **Flujo Alternativo: Sin Profesionales Disponibles (No Match)**
+
 1. El cliente solicita un servicio inmediato desde Rider App (estado `pending`).
-2. Driver App busca profesionales en el radio especificado, pero no hay ninguno disponible o todos rechazan la solicitud.
+2. Driver App busca profesionales que esten activos en ese momento, pero no hay ninguno disponible o todos rechazan la solicitud.
 3. Driver App notifica a Rider App que no hay candidatos.
 4. Rider App informa al cliente y el `Job` pasa a estado `cancelled`. El cliente deberá crear una nueva solicitud más tarde si lo desea.
 
 **Flujo Alternativo: Cancelación por parte del Profesional**
+
 1. Un profesional ya había aceptado un pedido (estado `accepted`) pero tiene un imprevisto.
 2. El profesional cancela el trabajo desde la Driver App.
 3. Driver App actualiza su `JobAssignment` a `cancelled` y notifica a Rider App.
 4. Rider App cambia el estado del `Job` a `cancelled` y le notifica al cliente que el trabajador canceló la visita.
 5. El flujo termina allí. El cliente está obligado a crear un `Job` completamente nuevo para volver a solicitar el servicio.
+
+**Flujo Alternativo: Cancelación por parte del Cliente (`Job` en estado `pending`)**
+
+1. El cliente solicita un servicio inmediato desde Rider App (estado `pending`).
+2. Por el momento, ningun profesional acepto el pedido.
+3. El cliente decide cancelar la solicitud.
+4. El flujo termina allí. El cliente está obligado a crear un `Job` completamente nuevo para volver a solicitar el servicio.
+
+**Flujo Alternativo: Cancelación por parte del Cliente (`Job` en estado `accepted` o en estado `in_progress`)**
+
+1. El cliente tiene un `Job` activo (en estado `accepted` o `in_progress`).
+2. El cliente decide cancelar el servicio.
+3. Rider App le pide confirmación al usuario y motivo de cancelación, mencionando que se le aplicará una multa.
+4. El cliente acepta la cancelación, el `job` pasa a estado `cancelled` y el cliente es redirigido a Payment App para abonar la multa.
+5. El flujo termina allí. El cliente está obligado a crear un `Job` completamente nuevo para volver a solicitar el servicio.
+
+**Flujo Alternativo: Turno Programado sin Profesionales (Auto-cancelación)**
+
+1. El cliente tiene un `Job` programado en estado `pending`.
+2. Se cumple la fecha y hora (`requested_date`) solicitada sin que ningún profesional de la Driver App lo haya aceptado.
+3. El sistema marca automáticamente el `Job` como `cancelled` por tiempo de espera excedido.
+4. El cliente recibe el aviso en su panel de turnos para eliminar la tarjeta y, si lo desea, generar una nueva solicitud.
