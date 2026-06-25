@@ -20,21 +20,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const reviewStats = await db.review.aggregate({
-      where: {
-        status: 'approved',
-      },
-      _avg: {
-        rating: true,
-      },
-      _count: {
-        _all: true,
-      },
-    });
+    const [stats, totalReseñas, reseñasAceptadas, reseñasRechazadas] = await Promise.all([
+      db.review.aggregate({
+        where: { status: "approved" },
+        _avg: { rating: true },
+        _count: { _all: true },
+      }),
+      db.review.count(),
+      db.review.count({ where: { status: "approved" } }),
+      db.review.count({ where: { status: "rejected" } }),
+    ]);
 
     return NextResponse.json({
-      calificacionPromedio: reviewStats._avg.rating ?? 0,
-      totalReseñas: reviewStats._count._all,
+      calificacionPromedio: Number((stats._avg.rating ?? 0).toFixed(2)),
+      totalReseñas,
+      reseñasAceptadas,
+      reseñasRechazadas,
     });
   } catch (error) {
     console.error('Error fetching analytics:', error);
