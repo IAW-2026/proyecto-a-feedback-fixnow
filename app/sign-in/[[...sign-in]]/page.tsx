@@ -4,14 +4,15 @@ import { db } from "@/lib/db"
 export const dynamic = "force-dynamic"
 
 export default async function SignInPage() {
-  const [totals, profGroups, clientGroups] = await Promise.all([
-    db.review.aggregate({ _count: { id: true }, _avg: { rating: true } }),
-    db.review.groupBy({ by: ["revieweeId"], where: { revieweeType: "professional" } }),
-    db.review.groupBy({ by: ["revieweeId"], where: { revieweeType: "client" } }),
+  const [totals, profGroups, clientGroups, pendingGroups] = await Promise.all([
+    db.review.aggregate({ _count: { id: true }, _avg: { rating: true }, where:{ status: "approved"} }),
+    db.review.groupBy({ by: ["revieweeId"], where: { revieweeType: "professional", status: { not: "pending" } } }),
+    db.review.groupBy({ by: ["revieweeId"], where: { revieweeType: "client", status: { not: "pending" } } }),
+    db.review.groupBy({ by: ["revieweeId"], where: { status: "pending" } }),
   ])
 
   const stats = [
-    { label: "Reseñas totales",       value: totals._count.id.toLocaleString("es-AR") },
+    { label: "Reseñas pendientes",     value: pendingGroups.length },
     { label: "Promedio general",       value: `${(totals._avg.rating ?? 0).toFixed(1)} ★` },
     { label: "Profesionales evaluados", value: profGroups.length },
     { label: "Clientes evaluados",     value: clientGroups.length },

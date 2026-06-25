@@ -24,6 +24,7 @@ En consecuencia, en este documento no se exige JWT de usuario final para consumi
 ## Rider App — Endpoints expuestos
 
 <!-- Documentar los endpoints que expone esta app -->
+
 ### 1. Obtener Jobs programados disponibles por categoría
 
 **Descripción:** Driver App consulta este endpoint para mostrar a los profesionales los trabajos programados disponibles que coincidan con su especialidad y zona. Filtra por `service_type` y opcionalmente por proximidad geográfica.
@@ -31,20 +32,21 @@ En consecuencia, en este documento no se exige JWT de usuario final para consumi
 **Llamador:** Driver App → Rider App
 
 ```
-GET /api/jobs/available?service_type=electricidad&lat=-38.71&lng=-62.26
+GET /api/v1/jobs/available?service_type=electricidad&lat=-38.71&lng=-62.26
 Authorization: Bearer <service-token>
 ```
 
 **Query params:**
 
-| Param | Tipo | Requerido | Descripción |
-|-------|------|-----------|-------------|
-| `service_type` | string | Sí | `plomeria`, `electricidad` o `gas` |
-| `lat` | float | No | Latitud de la ubicación del profesional |
-| `lng` | float | No | Longitud de la ubicación del profesional |
-| `radius_km` | int | No | Radio de búsqueda (default: 20) |
+| Param          | Tipo   | Requerido | Descripción                              |
+| -------------- | ------ | --------- | ---------------------------------------- |
+| `service_type` | string | Sí        | `plomeria`, `electricidad` o `gas`       |
+| `lat`          | float  | No        | Latitud de la ubicación del profesional  |
+| `lng`          | float  | No        | Longitud de la ubicación del profesional |
+| `radius_km`    | int    | No        | Radio de búsqueda (default: 20)          |
 
 **Response 200:**
+
 ```json
 {
   "jobs": [
@@ -61,6 +63,7 @@ Authorization: Bearer <service-token>
   ]
 }
 ```
+
 **Response 401 Unauthorized**
 **Response 422 Unprocessable Entity:** Si falta `service_type`
 
@@ -73,11 +76,12 @@ Authorization: Bearer <service-token>
 **Llamador:** Driver App → Rider App
 
 ```
-PATCH /api/jobs/[job_id]
+PATCH /api/v1/jobs/[job_id]
 Authorization: Bearer <service-token>
 ```
 
 **Request body (al aceptar):**
+
 ```json
 {
   "status": "accepted",
@@ -86,43 +90,53 @@ Authorization: Bearer <service-token>
 ```
 
 **Request body (al completar):**
+
 ```json
 {
-  "status": "completed"
+  "status": "completed",
+  "estimated_price": 12500,
+  "description": "Necesito instalar un calefactor.\n\n[INFORME DEL PROFESIONAL]: Trabajo realizado con éxito. Se requirió una pieza extra."
 }
 ```
+> **Nota:** Al completar el trabajo, es obligatorio enviar el estimated_price final y la description actualizada con el reporte técnico del profesional, ya que Rider App utiliza estos datos para generar el comprobante de cobro.
 
 **Request body (al cancelar):**
+
 ```json
 {
   "status": "cancelled",
   "cancellation_reason": "El profesional tuvo un imprevisto con su vehículo y no puede asistir."
 }
 ```
+
 > Por seguridad y precisión, la fecha y hora de cancelación la debe poner el servidor que recibe la petición (la Rider App) en el momento exacto en que procesa el cambio en la base de datos. El llamador solo envía el motivo humano de la cancelación.
 
 **Response 200:**
+
 ```json
 {
   "job_id": "uuid",
-  "status": "accepted | completed",
+  "status": "accepted | completed | cancelled",
   "updated_at": "ISO8601"
 }
 ```
+
 **Response 401 Unauthorized**
 **Response 404:** No existe un Job con ese `job_id`.
 
 ---
 
-### 3. Recibir confirmación de pago exitoso (Webhook)
+### 3. Recibir confirmación de pago exitoso 
+
 **Descripción:** Payments App llama a este endpoint para informar que el cobro al cliente se procesó correctamente en Mercado Pago. Rider App utiliza esta notificación para actualizar la interfaz del cliente y habilitar la opción de dejar una reseña.
 
 **Llamador:** Payments App → Rider App
 
-`POST /api/jobs/[job_id]/payment-confirmation`
+`POST /api/v1/jobs/[job_id]/payment-confirmation`
 `Authorization: Bearer <service-token>`
 
 **Request body:**
+
 ```json
 {
   "status": "paid",
@@ -140,7 +154,7 @@ Authorization: Bearer <service-token>
 ## Driver App — Endpoints expuestos
 
 <!-- Documentar los endpoints que expone esta app -->
-### 1. Recibir un nuevo Job y asignar profesional
+### 1. Recibir un nuevo Job
 
 **Descripción:** Rider App envía los datos del Job recién creado. Driver App ejecuta internamente la lógica de asignación: filtra sus profesionales por `service_type` coincidente, evalúa disponibilidad y proximidad, crea registros `JobAssignment` con status `pending` para los candidatos y los notifica. Devuelve la lista de candidatos a Rider App para que el cliente tenga feedback inmediato.
 
@@ -152,10 +166,12 @@ Authorization: Bearer <service-token>
 ```
 
 **Request body:**
+
 ```json
 {
   "job_id": "uuid*",
   "client_id": "clerk_user_id*",
+  "client_full_name": "string*",
   "service_type": "plomeria | electricidad | gas  *",
   "description": "string*",
   "location": {
@@ -169,34 +185,28 @@ Authorization: Bearer <service-token>
 }
 ```
 
-> `requested_date` es obligatorio si `urgency` es `scheduled`. Para solicitudes inmediatas puede omitirse o enviarse `null`.
+> **Nota de compatibilidad (Forward-Compatibility)**: La Rider App está diseñada para enviar un payload extendido en la creación de trabajos. Además de los campos obligatorios para inmediatez, el JSON de la Rider App inyecta automáticamente urgency (immediate o scheduled), requested_date (ISO8601) y location detallada. Actualmente la Driver App ignora estos campos adicionales, pero la Rider App ya se encuentra preparada enviando los datos para el flujo de turnos programados de la Etapa 3.
 
 **Response 200:**
+
 ```json
 {
-  "candidates": [
-    {
-      "professional_id": "uuid",
-      "full_name": "Carlos Gómez",
-      "rating": 4.8,
-      "distance_km": 1.2,
-      "is_available": true
-    }
-  ],
-  "total_notified": 3
+  "notified_count": 3,
+  "job_id": "uuid*"
 }
 ```
 
-> **Nota aclaratoria:** La lista de `candidates` devuelta en este endpoint representa únicamente a los profesionales que fueron **notificados** sobre la solicitud. No implica una asignación definitiva. La asignación real ocurre en un paso posterior, exclusivamente cuando un profesional decide aceptar el trabajo.
-
+**Response 400:** Faltan datos necesarios
 **Response 401 Unauthorized:** Token de servicio invalido
-**Response 404:** No se encontraron profesionales disponibles con ese `service_type` en el radio de búsqueda.
-**Response 422 Unprocessable Entity:** Datos invalidos o faltantes (ej. falta `scheduled_time` en un pedido programado) 
+**Response 404:** No se encontraron profesionales disponibles con ese `service_type`.
+**Response 422 Unprocessable Entity:** Datos invalidos o faltantes (ej. falta `scheduled_time` en un pedido programado)
+**Response 409:** Ya existe una solicitud pendiente con ese `job_id`
+
 ---
 
-### 2. Modificar la información de un Job
+### 2. Modificar un Job
 
-**Descrición:** Rider App actualiza la información de un Job existente, cuyo estado debe ser `pending`.
+**Descrición:** Rider App actualiza la información de un Job existente. El estado del Job debe ser `pending`.
 
 **Llamador:** Rider App → Driver App
 
@@ -208,58 +218,107 @@ Authorization: Bearer <service-token>
 **Request body:**
 ```json
 {
-  "description": "string",
+  "service_type": "string*"
+  "description": "string*",
+  "estimated_price": "number*",
   "location": {
-    "lat": -38.7183,
-    "lng": -62.2661
-  },
-  "urgency": "immediate | scheduled",
-  "requested_date": "ISO8601 | null",
-  "estimated_price": 6000
+    "lat": "float*",
+    "lng": "float*"
+  }
 }
 ```
 
-> `requested_date` es obligatorio si `urgency` es `scheduled`. Para solicitudes inmediatas puede omitirse o enviarse `null`.
+> **Nota de compatibilidad (Auditoría de Cancelaciones)**: Cuando el cliente cancela un trabajo, la Rider App envía en el payload el campo opcional "reason". Aunque temporalmente la Driver App no procesa ni persiste el motivo exacto de la cancelación, la Rider App lo envía para mantener la integridad de la auditoría y alimentar correctamente la base de datos central en la Etapa 3.
 
 **Response 200:**
+
 ```json
 {
-  "job_id": "uuid",
-  "status": "updated",
-  "updated_fields": ["description", "estimated_price"],
-  "updated_at": "ISO8601"
+  "message": "string",
+  "job": {
+    "status": "pending | cancelled",
+    "id": "uuid",
+    "jobId": "uuid",
+    "clientId": "string",
+    "serviceType": "gas | electricidad | plomeria",
+    "description": "string",
+    "latitude": "float",
+    "longitude": "float",
+    "estimatedPrice": "number | null",
+    "assignedTo": "string | null"
+  }
 }
 ```
 
-**Response 400:** No se pudo modificar el Job porque no tenía estado `pending`.
+**Response 400:** No habian campos a modificar.
+**Response 401 Unauthorized:** Token de servicio inválido.
+**Response 404:** No se encontro el trabajo.
+**Response 409:** El trabajo no está en estado `pending`.
 
-### 3. Obtener el estado de asignación de un Job
+### 3. Cancelar un Job
 
-**Descripción:** Rider App consulta si un profesional ya aceptó el Job y quién es. Se usa para actualizar la vista del cliente mientras espera confirmación.
+**Descrición:** Rider App cancela un Job existente.
 
 **Llamador:** Rider App → Driver App
 
 ```
-GET /api/jobs/[job_id]/assignment
+POST /api/jobs/[job_id]/cancellations
 Authorization: Bearer <service-token>
+```
+
+**Request body:**
+```json
+{
+  "cancellation_reason": "string*"
+}
 ```
 
 **Response 200:**
 ```json
 {
-  "job_id": "uuid",
-  "status": "pending | accepted | in_progress | completed",
-  "professional_id": "uuid | null",
-  "full_name": "string | null",
-  "accepted_at": "ISO8601 | null"
+  "message": "string",
 }
 ```
 
-**Response 404:** No existe `JobAssignment` para ese `job_id`.
+**Response 400:** No habian campos a modificar.
+**Response 401 Unauthorized:** Token de servicio inválido.
+**Response 404:** No se encontro el trabajo.
+**Response 409:** El trabajo no está en estado `pending`.
+
+### 4. Notificar Acreditación de Pago
+
+**Descripción:** Payments App notifica la acreditación del pago de un Job a un profesional.
+
+**Llamador:** Payments App → Driver App
+
+```
+PATCH /api/jobs/[job_id]/payout-notifications
+Authorization: Bearer <service-token>
+```
+
+**Request body:**
+
+```json
+{
+  "professional_id": "uuid*",
+  "amount": "number*"
+}
+```
+
+**Response 200:**
+
+```json
+{
+  "message": "string"
+}
+```
+
+**Response 400:** Faltan campos necesarios.
+**Response 404:** No existe `Professional` registrado con ese `professional_id`.
 
 ---
 
-### 4. Actualizar el rating promedio de un profesional
+### 5. Actualizar el rating promedio de un profesional
 
 **Descripción:** Feedback App llama a este endpoint cada vez que se registra una nueva reseña sobre un profesional. En Driver App persiste el nuevo rating promedio en el perfil del `Professional`.
 
@@ -271,45 +330,45 @@ Authorization: Bearer <service-token>
 ```
 
 **Request body:**
+
 ```json
 {
-  "new_average_rating": 4.6,
-  "total_reviews": 23
+  "new_average_rating": "number*",
+  "rating": "number*"
 }
 ```
 
 **Response 200:**
+
 ```json
 {
-  "professional_id": "uuid",
-  "rating": 4.6,
-  "total_reviews": 23,
-  "updated_at": "ISO8601"
+  "message": "string"
 }
 ```
+
+**Response 400:** Faltan datos necesarios.
+**Response 404.** Profesional no encontrado.
+
 ---
 
-### 5. Notificar acreditación de un pago
+### 5. Notificar cancelación por parte del cliente
 
-**Descripción:** Payments App informa que el pago ha sido procesado exitosamente para que el profesional vea su ganancia reflejada.
+**Descripción:** Rider App llama a este endpoint cuando el cliente decide cancelar la solicitud. Driver App lo utiliza para liberar la agenda del profesional (si ya estaba asignado) o eliminar la oferta de la bolsa de trabajo.
 
-**Llamador:** Payments App → Driver App
+**Llamador:** Rider App → Driver App
 
-```
-POST /api/jobs/[job_id]/payout-notification
-Authorization: Bearer <service-token>
-```
+`POST /api/jobs/[job_id]/cancel`
+`Authorization: Bearer <service-token>`
 
 **Request body:**
+
 ```json
-{ 
-  "status": "paid*", 
-  "amount": 7200, 
-  "paid_at": "ISO8601" 
+{
+  "reason": "CAMBIE_DE_OPINION | MUCHO_TIEMPO_ESPERA | VALOR_TRABAJO_ALTO"
 }
 ```
 
-**Response 200:** Notificación recibida y procesada correctamente.
+**Response 200:** Notificación procesada y profesional liberado.
 **Response 401 Unauthorized**
 **Response 404:** El job no existe
 **Response 500:** Error en la recepción; la Payments App debería reintentar la notificación
@@ -319,6 +378,7 @@ Authorization: Bearer <service-token>
 ## Payments App — Endpoints expuestos
 
 <!-- Documentar los endpoints que expone esta app -->
+
 ### 1. Registrar y procesar el pago de un Job
 
 **Descripción:** Rider App llama a este endpoint cuando el usuario inicia el proceso de pago. Payments App crea el registro de `Payment`, inicia el cobro al cliente vía Mercado Pago y, al confirmarse, liquida al profesional descontando la comisión de la plataforma. Cuando finaliza el pago, notifica tanto a Rider App como a Driver App del cobro exitoso por el trabajo.
@@ -326,24 +386,28 @@ Authorization: Bearer <service-token>
 **Llamador:** Rider App → Payments App
 
 ```
+
 POST /api/payments
 Authorization: Bearer <service-token>
+
 ```
 
 **Request body:**
+
 ```json
 {
   "job_id": "uuid*",
   "client_id": "clerk_id*",
   "professional_id": "uuid*",
   "amount": 8000,
-  "commission_rate": 0.10
+  "commission_rate": 0.1
 }
 ```
 
 > `commission_rate` es un porcentaje decimal. `commission = amount × commission_rate` se calcula en Payments App.
 
 **Response 201:**
+
 ```json
 {
   "payment_id": "uuid",
@@ -355,6 +419,7 @@ Authorization: Bearer <service-token>
   "created_at": "ISO8601"
 }
 ```
+
 **Response 401 Unauthorized**
 **Response 409:** Ya existe un pago para ese `job_id`.
 
@@ -372,6 +437,7 @@ Authorization: Bearer <service-token>
 ```
 
 **Response 200:**
+
 ```json
 {
   "payment_id": "uuid",
@@ -390,9 +456,10 @@ Authorization: Bearer <service-token>
 ## Feedback App — Endpoints expuestos
 
 <!-- Documentar los endpoints que expone esta app -->
+
 ### 1. Registrar una reseña a un profesional
 
-**Descripción:** Rider App llama a este endpoint para registrar la reseña del Cliente al profesional una vez que el Job tiene estado `completed`. Feedback App guarda la reseña y llama automáticamente al endpoint 3 de Driver App para actualizar el rating promedio del profesional.
+**Descripción:** Rider App llama a este endpoint para registrar la reseña del Cliente al profesional una vez que el Job tiene estado `completed`. Feedback App guarda la reseña y una vez aprobada, llama automáticamente al endpoint 3 de Driver App para actualizar el rating promedio del profesional.
 
 **Llamador:** Rider App → Feedback App
 
@@ -402,6 +469,7 @@ Authorization: Bearer <service-token>
 ```
 
 **Request body:**
+
 ```json
 {
   "job_id": "uuid*",
@@ -415,6 +483,7 @@ Authorization: Bearer <service-token>
 > `rating` debe ser un entero entre 1 y 5 inclusive.
 
 **Response 201:** Reseña creada exitosamente.
+
 ```json
 {
   "review_id": "uuid",
@@ -444,6 +513,7 @@ Authorization: Bearer <service-token>
 ```
 
 **Request body:**
+
 ```json
 {
   "job_id": "uuid*",
@@ -457,6 +527,7 @@ Authorization: Bearer <service-token>
 > `rating` debe ser un entero entre 1 y 5 inclusive.
 
 **Response 201:** Reseña creada correctamente.
+
 ```json
 {
   "review_id": "uuid",
@@ -486,12 +557,13 @@ Authorization: Bearer <service-token>
 
 **Query params opcionales:**
 
-| Param | Tipo | Descripción |
-|-------|------|-------------|
-| `page` | int | Número de página (default: 1) |
-| `limit` | int | Reseñas por página (default: 10) |
+| Param   | Tipo | Descripción                      |
+| ------- | ---- | -------------------------------- |
+| `page`  | int  | Número de página (default: 1)    |
+| `limit` | int  | Reseñas por página (default: 10) |
 
 **Response 200:**
+
 ```json
 {
   "professional_id": "uuid",
@@ -525,7 +597,8 @@ GET /api/reviews/clients/[client_id]
 Authorization: Bearer <service-token>
 ```
 
-**Response 200:** 
+**Response 200:**
+
 ```json
 {
   "client_id": "uuid",
@@ -544,28 +617,27 @@ Authorization: Bearer <service-token>
 }
 ```
 
-
 <!-- Agregar secciones por cada integración adicional identificada -->
 
 ## Resumen de integraciones
 
-| # | Llamador | Endpoint | Receptor | Cuándo |
-|---|----------|----------|----------|--------|
-| 1 | Rider App | `POST /api/jobs` | Driver App | Cliente solicita un servicio inmediato o programado |
-| 2 | Rider App | `PATCH /api/jobs/[job_id]` | Driver App | Cliente modifica la información de un Job (en estado pending) |
-| 3 | Rider App | `GET /api/jobs/[job_id]/assignment` | Driver App | Cliente consulta si ya hay un profesional asignado |
-| 4 | Driver App | `GET /api/jobs/available` | Rider App | Profesional abre la bolsa de trabajos programados |
-| 5 | Driver App | `PATCH /api/jobs/[job_id]` | Rider App | Profesional acepta el Job o marca el trabajo como completado |
-| 6 | Rider App | `POST /api/payments` | Payments App | Cliente inicia el proceso de pago al finalizar el trabajo |
-| 7 | Rider App | `GET /api/payments/jobs/[job_id]` | Payments App | Cliente verifica el estado de su pago |
-| 8 | Driver App | `GET /api/payments/jobs/[job_id]` | Payments App | Profesional verifica si su liquidación fue procesada |
-| 9 | Payments App | `POST /api/jobs/[job_id]/payment-confirmation` | Rider App | Payments App avisa que el cobro al cliente fue exitoso |
-| 10| Payments App | `POST /api/jobs/[job_id]/payout-notification` | Driver App | Payments App avisa que la liquidación al trabajador fue exitosa |
-| 11| Rider App | `POST /api/reviews/from-client` | Feedback App | Cliente califica al profesional |
-| 12| Driver App | `POST /api/reviews/from-professional` | Feedback App | Profesional califica al cliente |
-| 13| Rider App | `GET /api/reviews/professionals/[professional_id]` | Feedback App | Cliente consulta el historial de confianza del profesional |
-| 14| Driver App | `GET /api/reviews/clients/[client_id]` | Feedback App | Profesional consulta el historial de confianza del cliente |
-| 15| Feedback App | `PUT /api/professionals/[professional_id]/rating` | Driver App | Se registra una nueva reseña y se actualiza el promedio |
+| #   | Llamador     | Endpoint                                           | Receptor     | Cuándo                                                                    |
+| --- | ------------ | -------------------------------------------------- | ------------ | ------------------------------------------------------------------------- |
+| 1   | Rider App    | `POST /api/jobs`                                   | Driver App   | Cliente solicita un servicio inmediato o programado                       |
+| 2   | Rider App    | `PATCH /api/jobs/[job_id]`                         | Driver App   | Cliente modifica la información de un Job (en estado pending)             |
+| 3   | Rider App    | `GET /api/jobs/[job_id]/assignment`                | Driver App   | Cliente consulta si ya hay un profesional asignado                        |
+| 4   | Driver App   | `GET /api/jobs/available`                          | Rider App    | Profesional abre la bolsa de trabajos programados                         |
+| 5   | Driver App   | `PATCH /api/jobs/[job_id]`                         | Rider App    | Profesional acepta el Job o marca el trabajo como completado              |
+| 6   | Rider App    | `POST /api/payments`                               | Payments App | Cliente inicia el proceso de pago al finalizar el trabajo                 |
+| 7   | Rider App    | `GET /api/payments/jobs/[job_id]`                  | Payments App | Cliente verifica el estado de su pago                                     |
+| 8   | Driver App   | `GET /api/payments/jobs/[job_id]`                  | Payments App | Profesional verifica si su liquidación fue procesada                      |
+| 9   | Payments App | `POST /api/jobs/[job_id]/payment-confirmation`     | Rider App    | Payments App avisa que el cobro al cliente fue exitoso                    |
+| 10  | Payments App | `POST /api/jobs/[job_id]/payout-notification`      | Driver App   | Payments App avisa que la liquidación al trabajador fue exitosa           |
+| 11  | Rider App    | `POST /api/reviews/from-client`                    | Feedback App | Cliente califica al profesional                                           |
+| 12  | Driver App   | `POST /api/reviews/from-professional`              | Feedback App | Profesional califica al cliente                                           |
+| 13  | Rider App    | `GET /api/reviews/professionals/[professional_id]` | Feedback App | Cliente consulta el historial de confianza del profesional                |
+| 14  | Driver App   | `GET /api/reviews/clients/[client_id]`             | Feedback App | Profesional consulta el historial de confianza del cliente                |
+| 15  | Feedback App | `PUT /api/professionals/[professional_id]/rating`  | Driver App   | Se registra una nueva reseña y una vez aprobada ,se actualiza el promedio |
 
 ---
 
@@ -577,23 +649,23 @@ Los endpoints que el frontend de cada app consume directamente (paneles de admin
 
 ### Matriz de autorización por endpoint inter-servicios
 
-* **Endpoint:** qué ruta se protege.
-* **Llamador permitido:** qué app está autorizada a invocarlo. 
-* **Mecanismo de autenticación:** en todos los casos, token interno de servicio (no JWT de usuario).
-* **Regla minima de autorización:** validacion básica obligatoria ademas del token (por ejemplo, estado valido del job, rating entre 1 y 5, existencia de pago).
+- **Endpoint:** qué ruta se protege.
+- **Llamador permitido:** qué app está autorizada a invocarlo.
+- **Mecanismo de autenticación:** en todos los casos, token interno de servicio (no JWT de usuario).
+- **Regla minima de autorización:** validacion básica obligatoria ademas del token (por ejemplo, estado valido del job, rating entre 1 y 5, existencia de pago).
 
-| Endpoint | Llamador permitido | Mecanismo de autenticación | Regla mínima de autorización |
-| --- | --- | --- | --- |
-| `POST /api/jobs` (Driver) | Rider App | Service token | Validar token interno y formato de `service_type` |
-| `PATCH /api/jobs/[job_id]` (Driver) | Rider App | Service token | Validar token interno y que Job esté en estado editable |
-| `GET /api/jobs/[job_id]/assignment` (Driver) | Rider App | Service token | Validar token interno |
-| `PUT /api/professionals/[professional_id]/rating` (Driver) | Feedback App | Service token | Validar token interno y rango de rating |
-| `POST /api/jobs/[job_id]/payout-notification` (Driver) | Payments App | Service token | Validar token interno y `status = paid` |
-| `GET /api/jobs/available` (Rider) | Driver App | Service token | Validar token interno y `service_type` |
-| `PATCH /api/jobs/[job_id]` (Rider) | Driver App | Service token | Validar token interno y transición de estado válida |
-| `POST /api/payments` (Payments) | Rider App | Service token | Validar token interno y unicidad de `job_id` |
-| `GET /api/payments/jobs/[job_id]` (Payments) | Rider App, Driver App | Service token | Validar token interno y existencia de pago |
-| `POST /api/reviews/from-client` (Feedback) | Rider App | Service token | Validar token interno y rating entre 1 y 5 |
-| `POST /api/reviews/from-professional` (Feedback) | Driver App | Service token | Validar token interno y rating entre 1 y 5 |
-| `GET /api/reviews/professionals/[professional_id]` (Feedback) | Rider App | Service token | Validar token interno |
-| `GET /api/reviews/clients/[client_id]` (Feedback) | Driver App | Service token | Validar token interno |
+| Endpoint                                                      | Llamador permitido    | Mecanismo de autenticación | Regla mínima de autorización                            |
+| ------------------------------------------------------------- | --------------------- | -------------------------- | ------------------------------------------------------- |
+| `POST /api/jobs` (Driver)                                     | Rider App             | Service token              | Validar token interno y formato de `service_type`       |
+| `PATCH /api/jobs/[job_id]` (Driver)                           | Rider App             | Service token              | Validar token interno y que Job esté en estado editable |
+| `GET /api/jobs/[job_id]/assignment` (Driver)                  | Rider App             | Service token              | Validar token interno                                   |
+| `PUT /api/professionals/[professional_id]/rating` (Driver)    | Feedback App          | Service token              | Validar token interno y rango de rating                 |
+| `POST /api/jobs/[job_id]/payout-notification` (Driver)        | Payments App          | Service token              | Validar token interno y `status = paid`                 |
+| `GET /api/jobs/available` (Rider)                             | Driver App            | Service token              | Validar token interno y `service_type`                  |
+| `PATCH /api/jobs/[job_id]` (Rider)                            | Driver App            | Service token              | Validar token interno y transición de estado válida     |
+| `POST /api/payments` (Payments)                               | Rider App             | Service token              | Validar token interno y unicidad de `job_id`            |
+| `GET /api/payments/jobs/[job_id]` (Payments)                  | Rider App, Driver App | Service token              | Validar token interno y existencia de pago              |
+| `POST /api/reviews/from-client` (Feedback)                    | Rider App             | Service token              | Validar token interno y rating entre 1 y 5              |
+| `POST /api/reviews/from-professional` (Feedback)              | Driver App            | Service token              | Validar token interno y rating entre 1 y 5              |
+| `GET /api/reviews/professionals/[professional_id]` (Feedback) | Rider App             | Service token              | Validar token interno                                   |
+| `GET /api/reviews/clients/[client_id]` (Feedback)             | Driver App            | Service token              | Validar token interno                                   |

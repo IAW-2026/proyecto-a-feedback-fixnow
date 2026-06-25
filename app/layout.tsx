@@ -17,7 +17,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'FixNow Feedback - Sistema de Reseñas',
   description: 'Sistema de reseñas y calificaciones para profesionales y clientes de FixNow',
-  generator: 'v0.app',
   icons: {
     icon: [
       {url:'favicon.ico'},

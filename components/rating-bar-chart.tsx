@@ -15,7 +15,7 @@ interface Props {
 }
 
 const AMBER = "#d97706"
-const MUTED = "#e5e7eb"
+const MUTED = "#f7d26a"
 
 export function RatingBarChart({ data }: Props) {
   // Aseguramos que los 5 ratings siempre aparezcan, aunque alguno tenga 0 reseñas

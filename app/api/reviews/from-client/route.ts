@@ -4,14 +4,15 @@ export const dynamic = "force-dynamic"
 import { z } from "zod"
 import { db } from "@/lib/db"
 import { withServiceAuth } from "@/lib/service-auth"
+import { moderateReview } from "@/lib/ai-moderator"
 import { updateProfessionalRating } from "@/services/driver-app"
 
 const schema = z.object({
-  job_id: z.string().uuid(),
-  client_id: z.string(),
+  job_id:          z.string().uuid(),
+  client_id:       z.string(),
   professional_id: z.string(),
-  rating: z.number().int().min(1).max(5),
-  comment: z.string().optional(),
+  rating:          z.number().int().min(1).max(5),
+  comment:         z.string().optional(),
 })
 
 export const POST = withServiceAuth(async (req: NextRequest) => {
@@ -32,36 +33,59 @@ export const POST = withServiceAuth(async (req: NextRequest) => {
 
   const review = await db.review.create({
     data: {
-      jobId: job_id,
-      reviewerId: client_id,
-      revieweeId: professional_id,
+      jobId:        job_id,
+      reviewerId:   client_id,
+      revieweeId:   professional_id,
       revieweeType: "professional",
       rating,
       comment,
     },
   })
 
-  const { _avg, _count } = await db.review.aggregate({
-    where: { revieweeId: professional_id, revieweeType: "professional" },
-    _avg: { rating: true },
-    _count: { rating: true },
+  const modResult = await moderateReview({
+    rating:       review.rating,
+    comment:      review.comment,
+    revieweeType: review.revieweeType,
   })
+  console.log(modResult);
 
-  await updateProfessionalRating(
-    professional_id,
-    Number((_avg.rating ?? 0).toFixed(2)),
-    _count.rating
-  )
+  if (modResult !== null) {
+    await Promise.all([
+      db.review.update({ where: { id: review.id }, data: { status: modResult.decision } }),
+      db.moderationLog.create({
+        data: {
+          reviewId:  review.id,
+          decision:  modResult.decision,
+          reason:    modResult.reason,
+          decidedBy: "ai",
+        },
+      }),
+    ])
+
+    if (modResult.decision === "approved") {
+      const { _avg, _count } = await db.review.aggregate({
+        where:  { revieweeId: review.revieweeId, revieweeType: "professional", status: "approved" },
+        _avg:   { rating: true },
+        _count: { rating: true },
+      })
+
+      await updateProfessionalRating(
+        review.revieweeId,
+        Number((_avg.rating ?? 0).toFixed(2)),
+        _count.rating,
+      )
+    }
+  }
 
   return NextResponse.json(
     {
-      review_id: review.id,
-      job_id: review.jobId,
-      client_id: review.reviewerId,
+      review_id:       review.id,
+      job_id:          review.jobId,
+      client_id:       review.reviewerId,
       professional_id: review.revieweeId,
-      rating: review.rating,
-      comment: review.comment,
-      created_at: review.createdAt,
+      rating:          review.rating,
+      comment:         review.comment,
+      created_at:      review.createdAt,
     },
     { status: 201 }
   )

@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic"
 import { z } from "zod"
 import { db } from "@/lib/db"
 import { withServiceAuth } from "@/lib/service-auth"
+import { moderateReview } from "@/lib/ai-moderator"
 
 const schema = z.object({
   job_id: z.string().uuid(),
@@ -39,6 +40,26 @@ export const POST = withServiceAuth(async (req: NextRequest) => {
       comment,
     },
   })
+
+  const modResult = await moderateReview({
+    rating:       review.rating,
+    comment:      review.comment,
+    revieweeType: review.revieweeType,
+  })
+
+  if (modResult !== null) {
+    await Promise.all([
+      db.review.update({ where: { id: review.id }, data: { status: modResult.decision } }),
+      db.moderationLog.create({
+        data: {
+          reviewId:  review.id,
+          decision:  modResult.decision,
+          reason:    modResult.reason,
+          decidedBy: "ai",
+        },
+      }),
+    ])
+  }
 
   return NextResponse.json(
     {

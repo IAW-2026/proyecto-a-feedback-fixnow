@@ -7,15 +7,16 @@ datasource db {
 }
 
 model Review {
-  id           String       @id @default(uuid())
-  jobId        String
-  reviewerId   String
-  revieweeId   String
-  revieweeType RevieweeType
-  rating       Int
-  comment      String?
-  status       ReviewStatus @default(pending)
-  createdAt    DateTime     @default(now())
+  id             String          @id @default(uuid())
+  jobId          String
+  reviewerId     String
+  revieweeId     String
+  revieweeType   RevieweeType
+  rating         Int
+  comment        String?
+  status         ReviewStatus    @default(pending)
+  createdAt      DateTime        @default(now())
+  moderationLogs ModerationLog[]
 
   @@unique([reviewerId, jobId])
   @@map("reviews")
@@ -38,4 +39,21 @@ model BannedWord {
   createdAt DateTime @default(now())
 
   @@map("banned_words")
+}
+
+enum ModerationActor {
+  ai
+  human
+}
+
+model ModerationLog {
+  id        String          @id @default(uuid())
+  reviewId  String
+  review    Review          @relation(fields: [reviewId], references: [id])
+  decision  ReviewStatus
+  reason    String
+  decidedBy ModerationActor
+  createdAt DateTime        @default(now())
+
+  @@map("moderation_logs")
 }

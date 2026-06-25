@@ -91,7 +91,7 @@ Dos capas separadas:
 1. **Frontend (admin):** Clerk v7 — `requireAdmin()` en `app/admin/layout.tsx`
 2. **APIs inter-servicio:** `INTERNAL_API_SECRET` — validado en `withServiceAuth()` de `lib/service-auth.ts`
 
-`INTERNAL_API_SECRET` actual: `"fixnow-dev-secret-2026"` — coordinar valor definitivo con el equipo antes de producción. Agregar también en variables de entorno de Vercel.
+`INTERNAL_API_SECRET` actual: `"supersecretkey"` — coordinar valor definitivo con el equipo antes de producción. Agregar también en variables de entorno de Vercel.
 
 ## Stack técnico
 

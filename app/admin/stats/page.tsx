@@ -188,7 +188,7 @@ export default async function StatsPage() {
                       </code>
                       <div className="flex-1 overflow-hidden rounded-full bg-muted h-2">
                         <div
-                          className="h-2 rounded-full bg-amber-500 transition-all"
+                          className="h-2 rounded-full bg-[#b31b1b] transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
