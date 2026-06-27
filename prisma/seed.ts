@@ -1,192 +1,87 @@
-import { db } from "../lib/db"
+import 'dotenv/config'
+import { RevieweeType, ReviewStatus, ModerationActor } from '@prisma/client'
+import { db as prisma } from '../lib/db'
 
 async function main() {
-  // Limpiar tabla primero para que sea idempotente
-  await db.review.deleteMany()
-  console.log("🗑️  Tabla limpiada")
+  console.log('🌱 Iniciando seed...')
 
-  await db.review.createMany({
-    data: [
-      // --- Reseñas de clientes sobre profesionales ---
-      {
-        id: "a1b2c3d4-0001-0001-0001-000000000001",
-        jobId: "job-f1a2b3c4-0001-0001-0001-000000000001",
-        reviewerId: "usr_client_001",
-        revieweeId: "usr_prof_001",
-        revieweeType: "professional",
-        rating: 5,
-        comment: "Excelente trabajo, llegó a horario y resolvió el problema en minutos. Lo recomiendo totalmente.",
-        status: "approved",
-        createdAt: new Date("2025-04-01T10:30:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0002-0002-0002-000000000002",
-        jobId: "job-f1a2b3c4-0002-0002-0002-000000000002",
-        reviewerId: "usr_client_002",
-        revieweeId: "usr_prof_002",
-        revieweeType: "professional",
-        rating: 4,
-        comment: "Muy buen servicio, prolijo y puntual. Le daría 5 estrellas pero tardó un poco más de lo estimado.",
-        status: "approved",
-        createdAt: new Date("2025-04-03T14:00:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0003-0003-0003-000000000003",
-        jobId: "job-f1a2b3c4-0003-0003-0003-000000000003",
-        reviewerId: "usr_client_003",
-        revieweeId: "usr_prof_003",
-        revieweeType: "professional",
-        rating: 2,
-        comment: "El trabajo quedó a medias, tuve que llamar a otro profesional para que lo termine. Mala experiencia.",
-        status: "pending",
-        createdAt: new Date("2025-04-05T09:15:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0004-0004-0004-000000000004",
-        jobId: "job-f1a2b3c4-0004-0004-0004-000000000004",
-        reviewerId: "usr_client_004",
-        revieweeId: "usr_prof_001",
-        revieweeType: "professional",
-        rating: 5,
-        comment: "Segunda vez que lo contrato y siempre cumple. Muy profesional.",
-        status: "approved",
-        createdAt: new Date("2025-04-08T11:00:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0005-0005-0005-000000000005",
-        jobId: "job-f1a2b3c4-0005-0005-0005-000000000005",
-        reviewerId: "usr_client_005",
-        revieweeId: "usr_prof_004",
-        revieweeType: "professional",
-        rating: 3,
-        comment: "El servicio estuvo bien pero el precio final fue mayor al presupuestado.",
-        status: "pending",
-        createdAt: new Date("2025-04-10T16:30:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0006-0006-0006-000000000006",
-        jobId: "job-f1a2b3c4-0006-0006-0006-000000000006",
-        reviewerId: "usr_client_006",
-        revieweeId: "usr_prof_005",
-        revieweeType: "professional",
-        rating: 5,
-        comment: null,
-        status: "approved",
-        createdAt: new Date("2025-04-12T08:45:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0007-0007-0007-000000000007",
-        jobId: "job-f1a2b3c4-0007-0007-0007-000000000007",
-        reviewerId: "usr_client_007",
-        revieweeId: "usr_prof_002",
-        revieweeType: "professional",
-        rating: 1,
-        comment: "No se presentó en el horario acordado y no avisó. Pésima atención.",
-        status: "rejected",
-        createdAt: new Date("2025-04-15T13:20:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0008-0008-0008-000000000008",
-        jobId: "job-f1a2b3c4-0008-0008-0008-000000000008",
-        reviewerId: "usr_client_008",
-        revieweeId: "usr_prof_006",
-        revieweeType: "professional",
-        rating: 4,
-        comment: "Muy atento y rápido. El trabajo quedó impecable.",
-        status: "approved",
-        createdAt: new Date("2025-04-18T10:00:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0009-0009-0009-000000000009",
-        jobId: "job-f1a2b3c4-0009-0009-0009-000000000009",
-        reviewerId: "usr_client_009",
-        revieweeId: "usr_prof_007",
-        revieweeType: "professional",
-        rating: 5,
-        comment: "Terminó antes de lo esperado y explicó todo lo que hizo. 10/10.",
-        status: "pending",
-        createdAt: new Date("2025-04-20T15:10:00Z"),
-      },
+  // 1. Limpiar tablas en orden de FK
+  await prisma.moderationLog.deleteMany()
+  await prisma.review.deleteMany()
+  await prisma.bannedWord.deleteMany()
+  console.log('🗑️  Tablas limpiadas')
 
-      // --- Reseñas de profesionales sobre clientes ---
-      {
-        id: "a1b2c3d4-0010-0010-0010-000000000010",
-        jobId: "job-f1a2b3c4-0001-0001-0001-000000000001",
-        reviewerId: "usr_prof_001",
-        revieweeId: "usr_client_001",
-        revieweeType: "client",
-        rating: 5,
-        comment: "Cliente muy amable, explicó el problema con claridad y el lugar de trabajo estaba ordenado.",
-        status: "approved",
-        createdAt: new Date("2025-04-01T12:00:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0011-0011-0011-000000000011",
-        jobId: "job-f1a2b3c4-0002-0002-0002-000000000002",
-        reviewerId: "usr_prof_002",
-        revieweeId: "usr_client_002",
-        revieweeType: "client",
-        rating: 4,
-        comment: "Buen cliente, aunque costó un poco acordar el horario al principio.",
-        status: "pending",
-        createdAt: new Date("2025-04-03T16:30:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0012-0012-0012-000000000012",
-        jobId: "job-f1a2b3c4-0003-0003-0003-000000000003",
-        reviewerId: "usr_prof_003",
-        revieweeId: "usr_client_003",
-        revieweeType: "client",
-        rating: 2,
-        comment: "El cliente cambió los requerimientos a mitad del trabajo sin respetar el presupuesto acordado.",
-        status: "rejected",
-        createdAt: new Date("2025-04-05T11:00:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0013-0013-0013-000000000013",
-        jobId: "job-f1a2b3c4-0005-0005-0005-000000000005",
-        reviewerId: "usr_prof_004",
-        revieweeId: "usr_client_005",
-        revieweeType: "client",
-        rating: 5,
-        comment: null,
-        status: "approved",
-        createdAt: new Date("2025-04-10T18:00:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0014-0014-0014-000000000014",
-        jobId: "job-f1a2b3c4-0008-0008-0008-000000000008",
-        reviewerId: "usr_prof_006",
-        revieweeId: "usr_client_008",
-        revieweeType: "client",
-        rating: 5,
-        comment: "Excelente cliente, muy puntual y cordial. Con gusto volvería a trabajar con él.",
-        status: "approved",
-        createdAt: new Date("2025-04-18T12:30:00Z"),
-      },
-      {
-        id: "a1b2c3d4-0015-0015-0015-000000000015",
-        jobId: "job-f1a2b3c4-0009-0009-0009-000000000009",
-        reviewerId: "usr_prof_007",
-        revieweeId: "usr_client_009",
-        revieweeType: "client",
-        rating: 4,
-        comment: "Cliente tranquilo y fácil de tratar. El acceso al lugar fue sencillo.",
-        status: "pending",
-        createdAt: new Date("2025-04-20T17:00:00Z"),
-      },
-    ],
+  // 2. Palabras prohibidas
+  const bannedWords = ['estafa', 'fraude', 'horrible', 'robo']
+  await prisma.bannedWord.createMany({
+    data: bannedWords.map((word) => ({ word })),
+  })
+  console.log(`✅ ${bannedWords.length} palabras prohibidas creadas`)
+
+  // 3. Reseñas de profesionales
+  // Promedios verificados: sum(scores) / scores.length === target
+  const professionalRatings = [
+    { id: 'prof-julio',                        jobIdPrefix: 'job-julio',      target: 4.4, scores: [4, 5, 4, 5, 4] },              // 22/5  = 4.4
+    { id: 'prof-camila',                       jobIdPrefix: 'job-camila',     target: 4.7, scores: [5, 5, 4, 5, 5, 5, 4, 5, 4, 5] }, // 47/10 = 4.7
+    { id: 'prof-diego',                        jobIdPrefix: 'job-diego',      target: 4.5, scores: [4, 5, 4, 5] },                  // 18/4  = 4.5
+    { id: 'prof-sofia',                        jobIdPrefix: 'job-sofia',      target: 4.9, scores: [5, 5, 5, 5, 5, 5, 5, 5, 5, 4] }, // 49/10 = 4.9
+    { id: 'prof-nicolas',                      jobIdPrefix: 'job-nicolas',    target: 4.3, scores: [4, 5, 4, 4, 4, 5, 4, 4, 4, 5] }, // 43/10 = 4.3
+    { id: 'prof-valeria',                      jobIdPrefix: 'job-valeria',    target: 4.8, scores: [5, 5, 5, 5, 4] },              // 24/5  = 4.8
+    { id: 'prof-martin',                       jobIdPrefix: 'job-martin',     target: 4.2, scores: [4, 5, 4, 4, 4] },              // 21/5  = 4.2
+    { id: 'user_3EYemLF8a3fUCHbCIE70ayra8nT', jobIdPrefix: 'job-lautaro-1',  target: 4.3, scores: [4, 5, 4, 4, 4, 5, 4, 4, 4, 5] }, // 43/10 = 4.3
+    { id: 'user_3DxYRYVCndXOSf04E0kum8vfk5O', jobIdPrefix: 'job-lautaro-2',  target: 5.0, scores: [5, 5] },                       // 10/2  = 5.0
+    { id: 'user_3EYqDmV4wSgR0Tjk0glP0k3C5a8', jobIdPrefix: 'job-catalina',   target: 4.3, scores: [4, 5, 4, 4, 4, 5, 4, 4, 4, 5] }, // 43/10 = 4.3
+    { id: 'prof-ana',                          jobIdPrefix: 'job-ana',        target: 4.8, scores: [5, 5, 5, 5, 4] },              // 24/5  = 4.8
+    { id: 'prof-luis',                         jobIdPrefix: 'job-luis',       target: 4.6, scores: [5, 4, 5, 4, 5] },              // 23/5  = 4.6
+    { id: 'prof-maria',                        jobIdPrefix: 'job-maria',      target: 4.9, scores: [5, 5, 5, 5, 5, 5, 5, 5, 5, 4] }, // 49/10 = 4.9
+  ]
+
+  const reviewData = professionalRatings.flatMap((prof) =>
+    prof.scores.map((score, i) => ({
+      jobId:        `${prof.jobIdPrefix}-rev-${i}`,
+      reviewerId:   `client-00${(i % 3) + 1}`,
+      revieweeId:   prof.id,
+      revieweeType: RevieweeType.professional,
+      rating:       score,
+      comment:      `Trabajo finalizado, puntaje de ${score}.`,
+      status:       ReviewStatus.approved,
+    }))
+  )
+
+  await prisma.review.createMany({ data: reviewData })
+  console.log(`✅ ${reviewData.length} reseñas de profesionales creadas`)
+
+  // 4. Reseña rechazada con log de moderación IA
+  const rejectedReview = await prisma.review.create({
+    data: {
+      jobId:        'job-rejected-1',
+      reviewerId:   'client-001',
+      revieweeId:   'prof-julio',
+      revieweeType: RevieweeType.professional,
+      rating:       1,
+      comment:      'Fue una estafa total, no lo recomiendo.',
+      status:       ReviewStatus.rejected,
+    },
   })
 
-  console.log("✅ Seed completado — 15 reviews insertadas")
+  await prisma.moderationLog.create({
+    data: {
+      reviewId:  rejectedReview.id,
+      decision:  ReviewStatus.rejected,
+      reason:    'Contiene palabra prohibida: estafa.',
+      decidedBy: ModerationActor.ai,
+    },
+  })
+  console.log('✅ Reseña rechazada con log de moderación IA creada')
+
+  console.log('🌱 Seed finalizado.')
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Error en el seed:", e)
+    console.error(e)
     process.exit(1)
   })
   .finally(async () => {
-    await db.$disconnect()
-    process.exit()
+    await prisma.$disconnect().catch(() => {})
   })
