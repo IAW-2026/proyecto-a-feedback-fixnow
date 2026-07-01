@@ -1,9 +1,10 @@
 "use server"
 
-import { updateTag } from "next/cache"
+import { updateTag, revalidatePath } from "next/cache"
 import { db } from "@/lib/db"
 import { requireAdmin } from "@/lib/clerk"
 import { updateProfessionalRating } from "@/services/driver-app"
+import { isAiModerationEnabled, setSetting } from "@/lib/settings"
 
 export async function updateReviewStatus(formData: FormData) {
   await requireAdmin()
@@ -43,4 +44,12 @@ export async function updateReviewStatus(formData: FormData) {
       _count.rating,
     )
   }
+}
+
+export async function toggleAiModeration(): Promise<boolean> {
+  await requireAdmin()
+  const current = await isAiModerationEnabled()
+  await setSetting("ai_moderation_enabled", current ? "false" : "true")
+  revalidatePath("/admin/reviews")
+  return !current
 }

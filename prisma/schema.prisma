@@ -46,6 +46,13 @@ enum ModerationActor {
   human
 }
 
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
+
 model ModerationLog {
   id        String          @id @default(uuid())
   reviewId  String

@@ -1,4 +1,6 @@
 import type { Review, ModerationLog } from "@prisma/client"
+import { isAiModerationEnabled } from "@/lib/settings"
+import { AiToggle } from "@/components/ai-toggle"
 
 type ReviewWithLog = Review & { moderationLogs: ModerationLog[] }
 import { unstable_cache } from "next/cache"
@@ -99,7 +101,7 @@ export default async function AdminReviewsPage({
     activeSort === "rating-asc"  ? { rating:    "asc"  as const } :
     { createdAt: "desc" as const } // date-desc y flagged — ambos traen por fecha desc desde DB
 
-  const [reviews, breakdown, bannedWords] = await Promise.all([
+  const [reviews, breakdown, bannedWords, aiEnabled] = await Promise.all([
     db.review.findMany({
       where,
       orderBy,
@@ -112,6 +114,7 @@ export default async function AdminReviewsPage({
     }),
     getBreakdown(),
     getBannedWords(),
+    isAiModerationEnabled(),
   ])
 
   const sortedReviews = activeSort === "flagged"
@@ -135,13 +138,16 @@ export default async function AdminReviewsPage({
         <div className="mx-auto max-w-4xl">
 
           {/* Encabezado */}
-          <header className="mb-6">
-            <h1 className="font-display text-2xl font-bold text-foreground">
-              Panel de Moderación
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Revisión y control de reseñas del sistema
-            </p>
+          <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-foreground">
+                Panel de Moderación
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Revisión y control de reseñas del sistema
+              </p>
+            </div>
+            <AiToggle enabled={aiEnabled} />
           </header>
 
           {/* Stats */}

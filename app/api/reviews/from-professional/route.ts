@@ -5,6 +5,7 @@ import { z } from "zod"
 import { db } from "@/lib/db"
 import { withServiceAuth } from "@/lib/service-auth"
 import { moderateReview } from "@/lib/ai-moderator"
+import { isAiModerationEnabled } from "@/lib/settings"
 
 const schema = z.object({
   job_id: z.string().uuid(),
@@ -41,11 +42,14 @@ export const POST = withServiceAuth(async (req: NextRequest) => {
     },
   })
 
-  const modResult = await moderateReview({
-    rating:       review.rating,
-    comment:      review.comment,
-    revieweeType: review.revieweeType,
-  })
+  const aiEnabled = await isAiModerationEnabled()
+  const modResult = aiEnabled
+    ? await moderateReview({
+        rating:       review.rating,
+        comment:      review.comment,
+        revieweeType: review.revieweeType,
+      })
+    : null
 
   if (modResult !== null) {
     await Promise.all([
